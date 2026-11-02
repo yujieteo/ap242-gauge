@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AP242 Gauge</title>
+<!--
+  ap242-gauge: open a STEP AP242 file and measure features, offline in one file.
+  This file contains occt-import-js 0.0.23 (https://github.com/kovacsv/occt-import-js),
+  JavaScript and WebAssembly, under the GNU Lesser General Public License v2.1.
+  occt-import-js contains Open CASCADE Technology (LGPL-2.1 with the Open CASCADE exception).
+  The full licence texts are in the element with id "licences" below.
+  You can replace the occt-import-js part: see build.mjs in the source repository.
+-->
+<style>
+  :root { --bg: #f4f5f7; --panel: #ffffff; --ink: #1d232b; --muted: #5b6573; --line: #d7dbe0;
+          --a: #e8730c; --b: #1f6fd1; --accent: #0b7a5a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+               font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #app { display: grid; grid-template-columns: 1fr 340px; height: 100%; }
+  #view { position: relative; min-width: 0; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #drop { position: absolute; inset: 16px; display: flex; align-items: center; justify-content: center;
+          border: 2px dashed var(--line); border-radius: 12px; color: var(--muted); text-align: center;
+          pointer-events: none; padding: 16px; }
+  #drop.hidden { display: none; }
+  #drop.over { border-color: var(--accent); color: var(--accent); }
+  aside { background: var(--panel); border-left: 1px solid var(--line); overflow: auto; padding: 14px; }
+  h1 { font-size: 16px; margin: 0 0 8px; }
+  h2 { font-size: 13px; margin: 16px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button, .file { font: inherit; padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px;
+                  background: #fff; color: var(--ink); cursor: pointer; }
+  .file input { display: none; }
+  .mode label { padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  .mode input { margin: 0 4px 0 0; }
+  .feat { border-left: 4px solid var(--line); padding: 4px 8px; margin: 6px 0; background: #fafbfc; }
+  .feat.a { border-color: var(--a); } .feat.b { border-color: var(--b); }
+  .feat b { display: block; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 3px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  #status { color: var(--muted); min-height: 1.4em; }
+  .hint { color: var(--muted); font-size: 12px; }
+  #licences { white-space: pre-wrap; font-size: 11px; max-height: 240px; overflow: auto; display: none; }
+  @media (max-width: 760px) { #app { grid-template-columns: 1fr; grid-template-rows: 55vh auto; }
+                              aside { border-left: 0; border-top: 1px solid var(--line); } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view">
+    <canvas id="gl"></canvas>
+    <div id="drop">Drop a .stp or .step file here, or use "Open STEP file".</div>
+  </div>
+  <aside>
+    <h1>AP242 Gauge</h1>
+    <div class="row">
+      <label class="file">Open STEP file<input id="file" type="file" accept=".stp,.step,.STP,.STEP"></label>
+      <button id="fit">Fit view</button>
+    </div>
+    <div id="status">Loading the STEP reader...</div>
+    <h2>Pick</h2>
+    <div class="row mode">
+      <label><input type="radio" name="mode" value="face" checked>Face</label>
+      <label><input type="radio" name="mode" value="edge">Edge</label>
+      <label><input type="radio" name="mode" value="point">Point</label>
+    </div>
+    <p class="hint">First click: reference feature A. Second click: feature B. A third click starts again.
+      Face gives a plane or a cylinder axis. Edge gives a line or a circle. Point snaps to a mesh vertex.
+      Drag to rotate, right-drag or shift-drag to pan, wheel to zoom.</p>
+    <div class="row"><button id="clear">Clear</button><span id="unit" class="hint"></span></div>
+    <div id="feats"></div>
+    <h2>Measure</h2>
+    <table id="meas"></table>
+    <h2>About</h2>
+    <p class="hint">Values come from fits to the triangle mesh of each CAD face. The fit residual
+      (rms) shows how well the face matches a plane or a cylinder. No data leaves this page.</p>
+    <button id="lic">Licences</button>
+    <div id="licences">/*LICENCES*/</div>
+  </aside>
+</div>
+<script>/*OCCT_JS*/</script>
+<script>/*GEOM_JS*/</script>
+<script>window.OCCT_WASM_GZ_B64 = "/*WASM_GZ_B64*/";</script>
+<script>/*APP_JS*/</script>
+</body>
+</html>
