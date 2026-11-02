@@ -1,0 +1,13 @@
+{
+  "name": "ap242-gauge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Open a STEP AP242 file in one offline HTML file and measure features from reference features.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.cjs"
+  },
+  "devDependencies": {
+    "occt-import-js": "0.0.23"
+  }
+}
