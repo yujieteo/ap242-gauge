@@ -37,7 +37,7 @@ npm run build   # writes dist/ap242-gauge.html
 npm test        # Node, no browser
 ```
 
-`build.mjs` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (gzip, then base64, decompressed in the browser with `DecompressionStream`), `src/geom.js` and `src/app.js`. The build is deterministic. CI rebuilds and checks that the committed `dist/` is the same.
+`build.mjs` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (gzip, then base64, decompressed in the browser with `DecompressionStream`), `src/geom.js` and `src/app.js`. The build is deterministic for one Node version, because the gzip output depends on the zlib in Node. CI uses Node 24.22.1 (see `.github/workflows/ci.yml`), rebuilds and checks that the committed `dist/` is the same.
 
 The test (`test/nist.test.cjs`) loads two NIST AP242 test models with occt-import-js, fits the faces that the NIST drawings dimension and compares the values with the drawing values: within 0.001 file units for lengths and 0.01° for angles. See [`test/data/SOURCE.md`](test/data/SOURCE.md) for the files and their source.
 
