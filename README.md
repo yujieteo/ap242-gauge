@@ -1,10 +1,12 @@
 # ap242-gauge
 
-Open a STEP AP242 file (for example from CATIA V5) in one offline HTML file and measure the dimensions of features from reference features. It uses occt-import-js (WebAssembly) in the browser, with no server.
+ap242-gauge opens a STEP AP242 file (for example from CATIA V5) in your browser. It measures distances, angles, diameters and radii of features from a reference feature.
+
+It is one HTML file that works offline. It needs no server and no network. It uses occt-import-js (WebAssembly) to read the STEP file.
 
 ## Use
 
-1. Download [`dist/ap242-gauge.html`](dist/ap242-gauge.html) (about 4.3 MB) and open it in a current browser (Chrome, Edge, Firefox or Safari). It works from a local file. It needs no network and no server.
+1. Download [`dist/ap242-gauge.html`](https://github.com/yujieteo/ap242-gauge/raw/main/dist/ap242-gauge.html) (about 10 MB). Open it in a current browser (Chrome, Edge, Firefox or Safari). It works from a local file.
 2. Click **Open STEP file**, or drop a `.stp` or `.step` file on the page. All parts of the file are shown.
 3. Select a pick mode and click a reference feature (A), then a second feature (B):
    - **Face**: a plane, or a cylinder (axis, diameter and radius). Other faces (cone, torus, free form) give their centroid.
