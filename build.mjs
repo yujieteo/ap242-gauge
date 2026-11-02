@@ -1,7 +1,6 @@
-// Builds dist/ap242-gauge.html: one offline file with occt-import-js (JS + gzip/base64 wasm),
+// Builds dist/ap242-gauge.html: one offline file with occt-import-js (JS + base64 wasm),
 // src/geom.js and src/app.js inlined. The output is deterministic, so CI can compare it.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { gzipSync } from 'node:zlib';
 
 const root = new URL('.', import.meta.url);
 const read = (p) => readFileSync(new URL(p, root));
@@ -11,7 +10,7 @@ if (version !== '0.0.23') throw new Error('expected occt-import-js 0.0.23, found
 
 const script = (s) => s.replace(/<\/script/gi, '<\\/script');
 const html = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-const wasm = gzipSync(read(occt + 'dist/occt-import-js.wasm'), { level: 9 }).toString('base64');
+const wasm = read(occt + 'dist/occt-import-js.wasm').toString('base64');
 const licences = [
   '==== occt-import-js ' + version + ' (dist/license.occt-import-js.txt) ====',
   read(occt + 'dist/license.occt-import-js.txt').toString(),
@@ -23,7 +22,7 @@ const parts = {
   '/*LICENCES*/': html(licences),
   '/*OCCT_JS*/': script(read(occt + 'dist/occt-import-js.js').toString()),
   '/*GEOM_JS*/': script(read('src/geom.js').toString()),
-  '/*WASM_GZ_B64*/': wasm,
+  '/*WASM_B64*/': wasm,
   '/*APP_JS*/': script(read('src/app.js').toString()),
 };
 let out = read('src/index.html').toString();

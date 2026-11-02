@@ -6,13 +6,11 @@
   const statusEl = $('status');
   const setStatus = (t) => { statusEl.textContent = t; };
 
-  // ---------- occt-import-js from the inlined, gzip-compressed wasm ----------
+  // ---------- occt-import-js from the inlined, base64 wasm ----------
   async function loadOcct() {
-    const bin = atob(window.OCCT_WASM_GZ_B64);
-    const gz = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) gz[i] = bin.charCodeAt(i);
-    const stream = new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'));
-    const wasmBinary = new Uint8Array(await new Response(stream).arrayBuffer());
+    const bin = atob(window.OCCT_WASM_B64);
+    const wasmBinary = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) wasmBinary[i] = bin.charCodeAt(i);
     return occtimportjs({ wasmBinary });
   }
   const occtReady = loadOcct().then((o) => { setStatus('Ready. Open a STEP file.'); return o; },
