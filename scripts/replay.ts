@@ -45,21 +45,19 @@ const lines = (file: string): string[] => readFileSync(file, 'utf8').split('\n')
 function main(): void {
   const accept = process.argv.includes('--accept');
   const baseRef = defaultBase();
-  const cache = join(tmpdir(), 'ap242-gauge-replay');
-  mkdirSync(cache, { recursive: true });
-  const inputs = join(cache, 'inputs.jsonl');
-  rmSync(inputs, { force: true });
-  console.log('capture: running the tests on the working tree');
-  if (run(['bun', 'test'], { AP242_REPLAY_CAPTURE: inputs }) !== 0) console.log('capture: some tests failed; the inputs they recorded are still replayed');
-  if (!existsSync(inputs)) throw new Error('the tests captured no inputs');
-
-  const baseCopy = mkdtempSync(join(tmpdir(), 'ap242-replay-base-'));
+  const work = mkdtempSync(join(tmpdir(), 'ap242-replay-'));
   try {
-    const tar = join(baseCopy, 'base.tar');
+    const inputs = join(work, 'inputs.jsonl');
+    console.log('capture: running the tests on the working tree');
+    if (run(['bun', 'test'], { AP242_REPLAY_CAPTURE: inputs }) !== 0) console.log('capture: some tests failed; the inputs they recorded are still replayed');
+    if (!existsSync(inputs)) throw new Error('the tests captured no inputs');
+    const baseCopy = join(work, 'base');
+    mkdirSync(baseCopy);
+    const tar = join(work, 'base.tar');
     git('archive', '--format=tar', '-o', tar, baseRef);
     mustRun(['tar', '-xf', tar, '-C', baseCopy]);
     const runner = join(import.meta.dir, 'replay-runner.ts');
-    const baseOut = join(cache, 'base.out'), branchOut = join(cache, 'branch.out');
+    const baseOut = join(work, 'base.out'), branchOut = join(work, 'branch.out');
     mustRun(['bun', 'run', runner, baseCopy, inputs, baseOut]);
     mustRun(['bun', 'run', runner, root, inputs, branchOut]);
     const result = compareOutputs(lines(baseOut), lines(branchOut));
@@ -70,11 +68,12 @@ function main(): void {
     }
     if (!accept) {
       console.error('replay failed: treat the commit as a refactor, or run with --accept after you read the diff');
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     console.log('replay: diff accepted on this run');
   } finally {
-    rmSync(baseCopy, { recursive: true, force: true });
+    rmSync(work, { recursive: true, force: true });
   }
 }
 
