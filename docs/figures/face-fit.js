@@ -1,9 +1,10 @@
 // ap242-gauge README figure: how one face is fitted to a plane or a cylinder.
 // Drawn with the schematic-emil style on the schematic-figure engine (venue web).
 // Rebuild: copy style.js of schematic-emil to emil.js and its fonts/ next to this file, then
-//   node <schematic-figure>/foundation/tools/render.mjs --root <project> --fig figure/figure.js
+//   node <schematic-figure>/foundation/tools/render.mjs --root . --fig docs/figures/face-fit.js
+// from the repository root, and copy docs/figures/out/face-fit.svg to docs/figures/face-fit.svg.
 // Every label comes from README.md ("How it measures") and src/geom.js (fitFace).
-// Hero: none, a geometric diagram of mesh fits: flat vector 3D (oblique projection), diagrammatic marks only.
+// Hero: none, a geometric diagram of mesh fits: flat vector 3D (orthographic projection), diagrammatic marks only.
 import * as E from './emil.js';
 
 export const figure = { width: 76, height: 36, name: 'face-fit', format: 'journal' };
