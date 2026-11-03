@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { EXCLUDED_PATHS, HOT_FILE, hotAllocations, htmlComments, isExcluded, tsComments } from './rules.ts';
 import type { Violation } from './rules.ts';
-import { DEFAULT_BUDGET_BYTES, PAGE_BUDGETS_BYTES, measurePages, overBudget } from './budget.ts';
+import { PAGE, PAGE_BUDGET_BYTES, gzipBytes, overBudget } from './budget.ts';
 
 const root = new URL('..', import.meta.url).pathname;
 const failures: string[] = [];
@@ -47,9 +47,9 @@ function distIsCurrent(): void {
 
 function budgets(): void {
   console.log('\n== page budget (gzip bytes)');
-  const sizes = measurePages(root + 'dist', PAGE_BUDGETS_BYTES, DEFAULT_BUDGET_BYTES);
-  for (const s of sizes) console.log(s.page + ': ' + s.gzipBytes + ' of ' + s.budget);
-  for (const s of overBudget(sizes)) { console.error(s.page + ' is over its budget'); failures.push('budget ' + s.page); }
+  const bytes = gzipBytes(root + PAGE);
+  console.log(PAGE + ': ' + bytes + ' of ' + PAGE_BUDGET_BYTES);
+  if (overBudget(bytes)) { console.error(PAGE + ' is over its budget'); failures.push('budget'); }
 }
 
 run('type check', ['node_modules/.bin/tsc', '--noEmit']);

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { overBudget, roundUpToStep } from '../scripts/budget.ts';
+import { PAGE_BUDGET_BYTES, overBudget } from '../scripts/budget.ts';
 import { hotAllocations, htmlComments, isExcluded, tsComments } from '../scripts/rules.ts';
 import { compareOutputs } from '../scripts/replay.ts';
 
@@ -44,10 +44,9 @@ test('excluded paths: dist, vendored data and lock file are skipped, source is n
   expect(isExcluded('src/geom.ts')).toBe(false);
 });
 
-test('page budget: rounds up to the next 10 KB and flags a page over its budget', () => {
-  expect(roundUpToStep(4_225_863)).toBe(4_230_000);
-  expect(roundUpToStep(4_230_000)).toBe(4_230_000);
-  expect(overBudget([{ page: 'a.html', gzipBytes: 11, budget: 10 }, { page: 'b.html', gzipBytes: 10, budget: 10 }]).map((s) => s.page)).toEqual(['a.html']);
+test('page budget: flags a page over its budget only', () => {
+  expect(overBudget(PAGE_BUDGET_BYTES + 1)).toBe(true);
+  expect(overBudget(PAGE_BUDGET_BYTES)).toBe(false);
 });
 
 test('output replay: reports every differing output and a missing one', () => {
