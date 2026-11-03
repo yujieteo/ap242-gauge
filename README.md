@@ -29,6 +29,10 @@ occt-import-js tessellates each B-rep face of the STEP file into triangles. The 
 - cylinder: the axis is the direction normal to all triangle normals, and the radius comes from a least squares circle in the plane normal to the axis
 - edge: the boundary segments of the face, grown along the boundary, fitted to a line or a circle
 
+<img src="docs/figures/face-fit.svg" width="640" alt="Three panels. a: a plane patch of mesh triangles with its normal n, the direction of least spread of the vertices. b: a faceted cylinder whose triangle normals all point across the axis. c: the view along the axis, where the vertices lie on a least squares circle of radius r.">
+
+*How one face is fitted: (a) plane normal n, (b) cylinder axis normal to all triangle normals, (c) radius r from a circle across the axis. The 12 facets are illustrative.*
+
 Each fit shows its rms residual. A face fits a plane or a cylinder only when the residual is below 1e-4 of the face size.
 
 ## Build and test
