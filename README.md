@@ -37,18 +37,25 @@ Each fit shows its rms residual. A face fits a plane or a cylinder only when the
 
 ## Build and test
 
+You need [Bun](https://bun.sh) 1.4.4.
+
 ```sh
-npm ci
-npm run build   # writes dist/ap242-gauge.html
-npm test        # Node, no browser
+bun install
+bun run build   # writes dist/ap242-gauge.html
+bun test        # no browser
+bun run check   # type check, source rules, dead code, tests, dist, page budget, output replay
 ```
 
-`build.mjs` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (base64), `src/geom.js` and `src/app.js`. The build is deterministic, because it does not compress. CI rebuilds and checks that the committed `dist/` is the same.
+`build.ts` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (base64) and `src/app.ts` with its imports, bundled by `bun build`. The build is deterministic, because it does not minify or compress. CI rebuilds and checks that the committed `dist/` is the same.
 
-The test (`test/nist.test.cjs`) loads two NIST AP242 test models with occt-import-js, fits the faces that the NIST drawings dimension and compares the values with the drawing values: within 0.001 file units for lengths and 0.01° for angles. See [`test/data/SOURCE.md`](test/data/SOURCE.md) for the files and their source.
+The test (`test/nist.test.ts`) loads two NIST AP242 test models with occt-import-js, fits the faces that the NIST drawings dimension and compares the values with the drawing values: within 0.001 file units for lengths and 0.01° for angles. See [`test/data/SOURCE.md`](test/data/SOURCE.md) for the files and their source.
+
+`bun run replay` runs the tests on the working tree and records the input of each fit and measurement. It runs these inputs through `src/geom` on the base commit and on the working tree, and fails on each difference. Run `bun run replay -- --accept` to accept a change of the output after you read the diff.
+
+`bun run scripts/figure.ts` renders `docs/figures/face-fit.ts` with the schematic-figure engine and compares the result with `docs/figures/face-fit.svg`.
 
 ## Licences
 
-`dist/ap242-gauge.html` contains [occt-import-js](https://github.com/kovacsv/occt-import-js) 0.0.23 by Viktor Kovacs, under the **GNU Lesser General Public License v2.1** (LGPL-2.1). occt-import-js contains Open CASCADE Technology, under LGPL-2.1 with the Open CASCADE exception. The HTML file holds both licence texts (button **Licences**) and a notice at the top. To use a different build of occt-import-js, replace it in `node_modules/occt-import-js` and run `npm run build`.
+`dist/ap242-gauge.html` contains [occt-import-js](https://github.com/kovacsv/occt-import-js) 0.0.23 by Viktor Kovacs, under the **GNU Lesser General Public License v2.1** (LGPL-2.1). occt-import-js contains Open CASCADE Technology, under LGPL-2.1 with the Open CASCADE exception. The HTML file holds both licence texts (button **Licences**) and a notice at the top. To use a different build of occt-import-js, replace it in `node_modules/occt-import-js` and run `bun run build`.
 
 The NIST test files are a work of the US Government.

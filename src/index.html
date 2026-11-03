@@ -10,7 +10,7 @@
   JavaScript and WebAssembly, under the GNU Lesser General Public License v2.1.
   occt-import-js contains Open CASCADE Technology (LGPL-2.1 with the Open CASCADE exception).
   The full licence texts are in the element with id "licences" below.
-  You can replace the occt-import-js part: see build.mjs in the source repository.
+  You can replace the occt-import-js part: see build.ts in the source repository.
 -->
 <style>
   :root { --bg: #f4f5f7; --panel: #ffffff; --ink: #1d232b; --muted: #5b6573; --line: #d7dbe0;
@@ -78,12 +78,11 @@
     <p class="hint">Values come from fits to the triangle mesh of each CAD face. The fit residual
       (rms) shows how well the face matches a plane or a cylinder. No data leaves this page.</p>
     <button id="lic">Licences</button>
-    <div id="licences">/*LICENCES*/</div>
+    <div id="licences">@@LICENCES@@</div>
   </aside>
 </div>
-<script>/*OCCT_JS*/</script>
-<script>/*GEOM_JS*/</script>
-<script>window.OCCT_WASM_B64 = "/*WASM_B64*/";</script>
-<script>/*APP_JS*/</script>
+<script>@@OCCT_JS@@</script>
+<script>window.OCCT_WASM_B64 = "@@WASM_B64@@";</script>
+<script>@@APP_JS@@</script>
 </body>
 </html>
