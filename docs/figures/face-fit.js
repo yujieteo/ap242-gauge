@@ -7,7 +7,7 @@
 // Hero: none, a geometric diagram of mesh fits: flat vector 3D (orthographic projection), diagrammatic marks only.
 import * as E from './emil.js';
 
-export const figure = { width: 76, height: 36, name: 'face-fit', format: 'journal' };
+export const figure = { width: 68, height: 36, name: 'face-fit', format: 'journal' };
 
 export default function draw(F, L) {
   const { r, line, text } = E.useEmil(F, L, 'web');
@@ -31,7 +31,7 @@ export default function draw(F, L) {
   const poly = (p, pts, st) => L.polygon(p, pts, st);
 
   // ---- a: plane -------------------------------------------------------------------------------------
-  const a = F.panel('a', { x: 1, y: 1, w: 21, h: 34 });
+  const a = F.panel('a', { x: 1, y: 1, w: 19, h: 34 });
   head(a, 12, 9, 'Plane');
   {
     const P = proj(1, 58, 24, 26);
@@ -39,7 +39,7 @@ export default function draw(F, L) {
     const J = [[0, 0], [2, -3], [0, 2], [-3, 1], [2, 2], [3, -2], [1, 3], [-2, -1], [0, 0]];
     const V = [];
     for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
-      const d = J[i * 3 + j]; V.push([i * 18 + d[0], j * 18 + d[1], 0]);
+      const d = J[i * 3 + j]; V.push([i * 16 + d[0], j * 16 + d[1], 0]);
     }
     const id = (i, j) => i * 3 + j;
     for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
@@ -47,19 +47,19 @@ export default function draw(F, L) {
       for (const t of [t1, t2]) poly(a, t.map((q) => P(...V[q])), { fill: fillA, stroke: mesh, width: line.thin, join: 'round' });
     }
     for (const v of V) L.circle(a, ...P(...v), 1.3, { fill: G[1200] });
-    const c = P(18, 18, 0), top = P(18, 18, 28);
+    const c = P(16, 16, 0), top = P(16, 16, 26);
     arr(a, c, top, FIT);
     L.circle(a, ...c, 1.6, { fill: FIT });
     lab(a, top[0] + 3, top[1] + 4, 'normal *n*', { color: FIT, weight: E.weight.name });
-    lab(a, 28, 88, 'least spread\nof vertices', { anchor: 'middle', lineGap: 1.15 });
+    lab(a, 25, 88, 'least spread\nof vertices', { anchor: 'middle', lineGap: 1.15 });
   }
 
   // ---- b: cylinder ----------------------------------------------------------------------------------
-  const b = F.panel('b', { x: 23, y: 1, w: 31, h: 34 });
+  const b = F.panel('b', { x: 20.5, y: 1, w: 27, h: 34 });
   head(b, 12, 9, 'Cylinder');
-  const R = 14, Lc = 36, N = 12;
+  const R = 13, Lc = 30, N = 12;
   {
-    const P = proj(6, 48, 42, 16);
+    const P = proj(4, 48, 42, 16);
     const th = (k) => (2 * Math.PI * k) / N + Math.PI / N;
     const pt = (x, k) => [x, R * Math.cos(th(k)), R * Math.sin(th(k))];
     const facets = [];
@@ -71,7 +71,7 @@ export default function draw(F, L) {
     // inside of the far wall first (seen through the open near end), then the near wall
     const back = facets.filter((f) => f.vis <= 0), front = facets.filter((f) => f.vis > 0);
     for (const f of back) poly(b, f.q, { fill: G[200], stroke: G[800], width: line.thin, join: 'round' });
-    const ax1 = P(Lc + 34, 0, 0);
+    const ax1 = P(Lc + 30, 0, 0);
     L.line(b, P(0, 0, 0), P(Lc, 0, 0), { stroke: FIT, width: line.bold, dash: '2.4 1.6' });
     front.sort((u, v) => u.vis - v.vis);
     for (const f of front) {
@@ -79,7 +79,7 @@ export default function draw(F, L) {
       L.line(b, f.q[0], f.q[2], { stroke: mesh, width: line.hair });   // the diagonal: two triangles per facet
     }
     L.line(b, P(Lc, 0, 0), ax1, { stroke: FIT, width: line.bold });
-    arr(b, P(Lc + 25, 0, 0), ax1, FIT);
+    arr(b, P(Lc + 22, 0, 0), ax1, FIT);
     lab(b, ax1[0] - 2, ax1[1] + 9, 'axis', { color: FIT, weight: E.weight.name, anchor: 'middle' });
     // the open near end, then one triangle normal per facet at that end: all of them lie across the axis
     const ring = Array.from({ length: N }, (_, k) => P(...pt(Lc, k)));
@@ -92,14 +92,14 @@ export default function draw(F, L) {
       if (!top || w[1] < top[1]) top = w;
     }
     lab(b, top[0] - 6, top[1] - 4, 'triangle normals', { color: BLUE, weight: E.weight.name, anchor: 'start' });
-    lab(b, 44, 88, 'axis ⟂ all normals', { anchor: 'middle' });
+    lab(b, 38, 88, 'axis ⟂ all normals', { anchor: 'middle' });
   }
 
   // ---- c: along the axis ----------------------------------------------------------------------------
-  const c = F.panel('c', { x: 55, y: 1, w: 20, h: 34 });
+  const c = F.panel('c', { x: 48, y: 1, w: 19, h: 34 });
   head(c, 12, 9, 'Along axis');
   {
-    const cx = 28, cy = 46, Rc = 19;
+    const cx = 27, cy = 46, Rc = 18;
     const th = (k) => (2 * Math.PI * k) / N + Math.PI / N;
     const V = Array.from({ length: N }, (_, k) => [cx + Rc * Math.cos(th(k)), cy - Rc * Math.sin(th(k))]);
     poly(c, V, { fill: G[200], stroke: mesh, width: line.thin, join: 'round' });
@@ -108,7 +108,7 @@ export default function draw(F, L) {
     const rEnd = [cx + Rc * Math.cos(Math.PI * 0.25 + Math.PI / N), cy - Rc * Math.sin(Math.PI * 0.25 + Math.PI / N)];
     L.line(c, [cx, cy], rEnd, { stroke: FIT, width: line.normal });
     L.circle(c, cx, cy, 1.6, { fill: FIT });
-    lab(c, cx + 3, cy + 9, 'axis', { color: FIT, weight: E.weight.name });
+    lab(c, cx, cy + 10, 'axis', { color: FIT, weight: E.weight.name, anchor: 'middle' });
     lab(c, (cx + rEnd[0]) / 2 - 4, (cy + rEnd[1]) / 2 - 1, '*r*', { color: FIT, weight: E.weight.name, anchor: 'end' });
     lab(c, cx, 88, 'least squares\ncircle', { anchor: 'middle', lineGap: 1.15, color: FIT });
   }
