@@ -12,4 +12,4 @@ They are a work of the US Government (public domain in the United States).
 | nist_ctc_01_asme1_ap242-e1.stp | 85a5752da05f53c456ca3a9e038c90358e1d5a3141d1f0d6e5f0970f2356e821 | mm | Ø35, Ø25 ±0.15, Ø20, 60° ±0.5° |
 | nist_ctc_05_asme1_ap242-e1.stp | 59bbc09a34621c03106e4c1b2a5bc909fdb67463117c16c4965ee7a6fe5c1521 | inch | Ø10.000 ±0.001, 5.000 ±0.008 |
 
-The archive README says that NIST removed the names of the CAD systems that made the files.
+The archive README says that the files do not name the CAD systems that made them.
