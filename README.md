@@ -1,6 +1,6 @@
 # ap242-gauge
 
-ap242-gauge opens a STEP AP242 file in your browser and measures distances, angles, diameters and radii between features.
+ap242-gauge opens a STEP AP242 file (for example from CATIA V5) in your browser and measures distances, angles, diameters and radii between features.
 
 It is one HTML file that works offline. It needs no server and no network. It uses occt-import-js (WebAssembly) to read the STEP file.
 
@@ -31,7 +31,7 @@ occt-import-js tessellates each B-rep face of the STEP file into triangles. The 
 
 ![Three panels. a: a plane patch of mesh triangles with its normal n, the direction of least spread of the vertices. b: a faceted cylinder whose triangle normals all point across the axis. c: the view along the axis, where the vertices lie on a least squares circle of radius r.](docs/figures/face-fit.svg)
 
-*How the tool fits one face: (a) plane normal n. (b) cylinder axis normal to all triangle normals. (c) radius r from a circle across the axis. The 12 facets are illustrative.*
+*Fit of one face: (a) plane normal n, (b) cylinder axis normal to all triangle normals, (c) radius r from a circle across the axis. The 12 facets are illustrative.*
 
 Each fit shows its rms residual. A face fits a plane or a cylinder only when the residual is below 1e-4 of the face size.
 
