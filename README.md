@@ -1,6 +1,6 @@
 # ap242-gauge
 
-ap242-gauge opens a STEP AP242 file (for example from CATIA V5) in your browser and measures distances, angles, diameters and radii between features.
+ap242-gauge opens STEP AP242 files (such as CATIA V5) in your browser and measures distances, angles, diameters and radii of features from a reference feature.
 
 It is one HTML file that works offline. It needs no server and no network. It uses occt-import-js (WebAssembly) to read the STEP file.
 
