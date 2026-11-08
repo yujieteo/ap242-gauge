@@ -6,7 +6,7 @@ It is one HTML file that works offline. It needs no server and no network. It us
 
 ## Use
 
-1. Download [`dist/ap242-gauge.html`](https://github.com/yujieteo/ap242-gauge/raw/main/dist/ap242-gauge.html) (about 10 MB). Open it in a current browser (Chrome, Edge, Firefox or Safari). It works from a local file.
+1. Download [`ap242-gauge.html` version 1.0.0](https://github.com/yujieteo/ap242-gauge/releases/download/v1.0.0/ap242-gauge.html) (about 10 MB). Open it in a current browser (Chrome, Edge, Firefox or Safari). It works from a local file.
 2. Click **Open STEP file**, or drop a `.stp` or `.step` file on the page. The page shows all parts of the file.
 3. Select a pick mode and click a reference feature (A), then a second feature (B):
    - Face: a plane, or a cylinder (axis, diameter and radius). Other faces (cone, torus, free form) give their centroid.
