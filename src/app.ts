@@ -1,4 +1,4 @@
-import { AXES, add, cross, extractFaces, faceEdge, featureFrom, fitFace, len, norm, parseStepLengthUnit, scale, sub } from './geom.ts';
+import { add, basis, boundary, extractFaces, faceEdge, featureFrom, fitFace, len, norm, parseStepLengthUnit, scale, sub } from './geom.ts';
 import type { Face, FaceFit, Feature, Fit, LengthUnit, Vec3 } from './geom.ts';
 import { describe, escapeHtml, measureRows } from './format.ts';
 import { DEFAULT_PART_COLOR, NO_SELECTION, createRenderer, freeBuf, makeBuf } from './gl.ts';
@@ -23,7 +23,7 @@ type Model = {
 
 type Hit = { readonly tri: number; readonly face: number; readonly point: Vec3 };
 type Ray = { readonly o: Vec3; readonly d: Vec3 };
-type Drag = { x: number; y: number; readonly x0: number; readonly y0: number; readonly pan: boolean };
+type Drag = { x: number; y: number; readonly id: number; readonly x0: number; readonly y0: number; readonly pan: boolean };
 
 function el<T extends HTMLElement>(id: string, ctor: { new (): T }): T {
   const e = document.getElementById(id);
@@ -69,6 +69,7 @@ async function openFile(file: File): Promise<void> {
   const result = occt(buf, unit.occt);
   if (!result.success || !result.meshes.length) { setStatus('occt-import-js could not read ' + file.name); return; }
   const faces = extractFaces(result.meshes);
+  if (!faces.length) { setStatus(file.name + ' has no surfaces to show'); return; }
   setModel(file.name, unit, faces, result.meshes);
   setStatus(file.name + ': ' + result.meshes.length + ' part mesh(es), ' + faces.length + ' faces, unit ' +
     unit.label + ' (' + Math.round(performance.now() - t0) + ' ms)');
@@ -82,18 +83,24 @@ function setModel(name: string, unit: LengthUnit, faces: readonly Face[], meshes
   const lo: [number, number, number] = [Infinity, Infinity, Infinity], hi: [number, number, number] = [-Infinity, -Infinity, -Infinity];
   let t = 0;
   for (const f of faces) {
-    const c = meshes[f.mesh]?.color ?? DEFAULT_PART_COLOR;
-    for (let k = 0; k < f.tri.length / 9; k++, t++) {
-      const a: Vec3 = [at(f.tri, k * 9), at(f.tri, k * 9 + 1), at(f.tri, k * 9 + 2)];
-      const n = norm(cross(sub([at(f.tri, k * 9 + 3), at(f.tri, k * 9 + 4), at(f.tri, k * 9 + 5)], a),
-        sub([at(f.tri, k * 9 + 6), at(f.tri, k * 9 + 7), at(f.tri, k * 9 + 8)], a)));
-      for (let vertex = 0; vertex < 3; vertex++) for (const axis of AXES) {
-        const j = vertex * 3 + axis;
-        tri[t * 9 + j] = at(f.tri, k * 9 + j);
-        nrm[t * 9 + j] = n[axis];
-        col[t * 9 + j] = c[axis];
-        lo[axis] = Math.min(lo[axis], at(f.tri, k * 9 + j));
-        hi[axis] = Math.max(hi[axis], at(f.tri, k * 9 + j));
+    const c = meshes[f.mesh]?.color ?? DEFAULT_PART_COLOR, T = f.tri;
+    for (let k = 0; k < T.length; k += 9, t++) {
+      const ax = at(T, k), ay = at(T, k + 1), az = at(T, k + 2);
+      const ux = at(T, k + 3) - ax, uy = at(T, k + 4) - ay, uz = at(T, k + 5) - az;
+      const vx = at(T, k + 6) - ax, vy = at(T, k + 7) - ay, vz = at(T, k + 8) - az;
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const scaleN = 1 / (Math.sqrt(nx * nx + ny * ny + nz * nz) || 1);
+      for (let j = 0; j < 9; j += 3) {
+        const o = t * 9 + j, x = at(T, k + j), y = at(T, k + j + 1), z = at(T, k + j + 2);
+        tri[o] = x; tri[o + 1] = y; tri[o + 2] = z;
+        nrm[o] = nx * scaleN; nrm[o + 1] = ny * scaleN; nrm[o + 2] = nz * scaleN;
+        col[o] = c[0]; col[o + 1] = c[1]; col[o + 2] = c[2];
+        if (x < lo[0]) lo[0] = x;
+        if (y < lo[1]) lo[1] = y;
+        if (z < lo[2]) lo[2] = z;
+        if (x > hi[0]) hi[0] = x;
+        if (y > hi[1]) hi[1] = y;
+        if (z > hi[2]) hi[2] = z;
       }
       fid[t * 3] = fid[t * 3 + 1] = fid[t * 3 + 2] = f.id;
       triFace[t] = f.id;
@@ -125,19 +132,10 @@ function uploadModel(tri: Float32Array, nrm: Float32Array, col: Float32Array, fi
   r.faces = makeBuf(gl, { p: tri, n: nrm, c: col, f: fid }, tri.length / 3);
   const seg: number[] = [];
   for (const f of faces) {
-    const count = new Map<string, { n: number; a: number; b: number }>();
-    const key = (i: number): string => [at(f.tri, i * 3), at(f.tri, i * 3 + 1), at(f.tri, i * 3 + 2)].map((x) => x.toFixed(6)).join(',');
-    for (let t = 0; t < f.tri.length / 9; t++) {
-      for (let k = 0; k < 3; k++) {
-        const a = t * 3 + k, b = t * 3 + (k + 1) % 3, ka = key(a), kb = key(b);
-        if (ka === kb) continue;
-        const ek = ka < kb ? ka + '|' + kb : kb + '|' + ka;
-        const e = count.get(ek);
-        if (e) e.n++; else count.set(ek, { n: 1, a, b });
-      }
-    }
-    for (const e of count.values()) if (e.n === 1) {
-      for (const i of [e.a, e.b]) seg.push(at(f.tri, i * 3), at(f.tri, i * 3 + 1), at(f.tri, i * 3 + 2));
+    const { first, segs } = boundary(f.tri);
+    for (const id of segs) {
+      const i = at(first, id) * 3;
+      seg.push(at(f.tri, i), at(f.tri, i + 1), at(f.tri, i + 2));
     }
   }
   r.edges = makeBuf(gl, { p: new Float32Array(seg) }, seg.length / 3);
@@ -146,7 +144,8 @@ function uploadModel(tri: Float32Array, nrm: Float32Array, col: Float32Array, fi
 function fitView(): void {
   if (!model) return;
   r.cam.target.x = model.center[0]; r.cam.target.y = model.center[1]; r.cam.target.z = model.center[2];
-  r.cam.dist = model.radius / Math.sin(r.cam.fov / 2) * 1.1;
+  const aspect = Math.min(1, canvas.clientWidth / Math.max(1, canvas.clientHeight));
+  r.cam.dist = model.radius / Math.sin(Math.atan(Math.tan(r.cam.fov / 2) * aspect)) * 1.1;
   draw(r);
 }
 
@@ -161,20 +160,24 @@ window.addEventListener('resize', requestDraw);
 let drag: Drag | null = null;
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointerdown', (e) => {
-  drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, pan: e.button === 2 || e.shiftKey };
+  if (drag) return;
+  drag = { x: e.clientX, y: e.clientY, id: e.pointerId, x0: e.clientX, y0: e.clientY, pan: e.button === 2 || e.shiftKey };
   canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', (e) => {
-  if (!drag || !model) return;
+  if (!drag || drag.id !== e.pointerId || !model) return;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
   drag.x = e.clientX; drag.y = e.clientY;
   if (drag.pan) pan(r.cam, r.scratch.frame, dx, dy, canvas.clientHeight);
   else orbit(r.cam, dx, dy);
   requestDraw();
 });
+canvas.addEventListener('pointercancel', (e) => { if (drag?.id === e.pointerId) drag = null; });
 canvas.addEventListener('pointerup', (e) => {
-  const d = drag; drag = null;
-  if (d && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 4 && e.button === 0 && !e.shiftKey) pickAt(e);
+  const d = drag;
+  if (!d || d.id !== e.pointerId) return;
+  drag = null;
+  if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 4 && e.button === 0 && !e.shiftKey) pickAt(e);
 });
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
@@ -266,8 +269,7 @@ function overlayFor(m: Model, p: Pick, color: readonly [number, number, number])
   }
   if (f.type === 'circle') {
     const d = p.feature.kind === 'axis' ? p.feature.dir : f.dir;
-    const t: Vec3 = Math.abs(d[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-    const u = norm(cross(d, t)), v = cross(d, u);
+    const [u, v] = basis(d);
     for (let k = 0; k < 64; k++) {
       const a0 = k / 64 * 2 * Math.PI, a1 = (k + 1) / 64 * 2 * Math.PI;
       seg.push(...add(f.point, add(scale(u, f.radius * Math.cos(a0)), scale(v, f.radius * Math.sin(a0)))));
@@ -316,6 +318,7 @@ function showPicks(): void {
 const fileInput = el('file', HTMLInputElement);
 fileInput.addEventListener('change', () => {
   const file = fileInput.files?.[0];
+  fileInput.value = '';
   if (file) openFile(file).catch((x: unknown) => setStatus(String(x)));
 });
 el('fit', HTMLButtonElement).addEventListener('click', fitView);

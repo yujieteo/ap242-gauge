@@ -30,7 +30,9 @@ Circle edge (face 3, fit rms 0.0000 mm) | diameter 100.0000 mm, radius 50.0000 m
   : Pick feature B to measure from A.
 Plane (face 4, fit rms 0.0000 mm) | normal (-1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
-Line edge (face 4) | length 2.2393 mm | direction (0.0000, -0.7071, 0.7071)
+Circle edge (face 4, fit rms 0.0000 mm) | diameter 20.0000 mm, radius 10.0000 mm | centre (-400.0000, 115.0000, -60.0000)
+  diameter: 20.0000 mm
+  radius: 10.0000 mm
   : Pick feature B to measure from A.
 Cylinder (face 5, fit rms 0.0000 mm) | diameter 100.0000 mm, radius 50.0000 mm | axis (0.0000, 0.0000, 1.0000)
   diameter: 100.0000 mm
@@ -56,7 +58,9 @@ Plane (face 8, fit rms 0.0000 mm) | normal (1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
 Line edge (face 8) | length 60.0000 mm | direction (0.0000, 0.0000, 1.0000)
   : Pick feature B to measure from A.
-Surface (face 9: not a plane or a cylinder): its centroid is used | (-241.1951, -134.5640, -26.2276)
+Cylinder (face 9, fit rms 0.0009 mm) | diameter 50.0026 mm, radius 25.0013 mm | axis (-0.0000, 0.0000, 1.0000)
+  diameter: 50.0026 mm
+  radius: 25.0013 mm
   : Pick feature B to measure from A.
 Line edge (face 9) | length 50.0000 mm | direction (0.0000, 0.0000, -1.0000)
   : Pick feature B to measure from A.
@@ -102,7 +106,9 @@ Plane (face 18, fit rms 0.0000 mm) | normal (0.0000, -1.0000, 0.0000)
   : Pick feature B to measure from A.
 Line edge (face 18) | length 86.1325 mm | direction (-1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
-Surface (face 19: not a plane or a cylinder): its centroid is used | (241.2126, -134.5607, -26.2252)
+Cylinder (face 19, fit rms 0.0009 mm) | diameter 50.0012 mm, radius 25.0006 mm | axis (0.0000, 0.0000, 1.0000)
+  diameter: 50.0012 mm
+  radius: 25.0006 mm
   : Pick feature B to measure from A.
 Line edge (face 19) | length 60.0000 mm | direction (0.0000, 0.0000, -1.0000)
   : Pick feature B to measure from A.
@@ -132,7 +138,9 @@ Circle edge (face 23, fit rms 0.0000 mm) | diameter 100.0000 mm, radius 50.0000 
   : Pick feature B to measure from A.
 Plane (face 24, fit rms 0.0000 mm) | normal (1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
-Line edge (face 24) | length 2.2393 mm | direction (0.0000, 0.7071, 0.7071)
+Circle edge (face 24, fit rms 0.0000 mm) | diameter 20.0000 mm, radius 10.0000 mm | centre (400.0000, -115.0000, -60.0000)
+  diameter: 20.0000 mm
+  radius: 10.0000 mm
   : Pick feature B to measure from A.
 Plane (face 25, fit rms 0.0000 mm) | normal (0.7071, 0.7071, 0.0000)
   : Pick feature B to measure from A.
@@ -154,7 +162,9 @@ Plane (face 28, fit rms 0.0000 mm) | normal (-1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
 Line edge (face 28) | length 60.0000 mm | direction (0.0000, 0.0000, 1.0000)
   : Pick feature B to measure from A.
-Surface (face 29: not a plane or a cylinder): its centroid is used | (241.1951, 134.5640, -26.2276)
+Cylinder (face 29, fit rms 0.0009 mm) | diameter 50.0026 mm, radius 25.0013 mm | axis (0.0000, -0.0000, 1.0000)
+  diameter: 50.0026 mm
+  radius: 25.0013 mm
   : Pick feature B to measure from A.
 Line edge (face 29) | length 50.0000 mm | direction (0.0000, 0.0000, -1.0000)
   : Pick feature B to measure from A.
@@ -231,9 +241,9 @@ A=3:face B=3:edge
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=4:face B=4:edge
-  angle axis to plane: 0.0000 °
-  distance axis to plane: 0.0000 mm
-  distance feature points: 123.1818 mm
+  angle axis to plane: 90.0000 °
+  distance of axis point from plane: 0.0000 mm
+  distance feature points: 117.4486 mm
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=5:face B=5:edge
@@ -261,8 +271,9 @@ A=8:face B=8:edge
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=9:face B=9:edge
-  distance point to axis: 18.8083 mm
-  distance feature points: 18.8483 mm
+  angle between axes: 0.0003 °
+  distance between parallel axes: 25.0012 mm
+  distance feature points: 25.0313 mm
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=10:face B=10:edge
@@ -291,7 +302,7 @@ A=13:face B=13:edge
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=14:face B=14:edge
   angle axis to plane: 90.0000 °
-  distance of B point from plane A: 0.0000 mm
+  distance of axis point from plane: 0.0000 mm
   distance feature points: 30.0000 mm
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
@@ -320,8 +331,9 @@ A=18:face B=18:edge
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=19:face B=19:edge
-  distance point to axis: 17.7649 mm
-  distance feature points: 18.1615 mm
+  angle between axes: 0.0003 °
+  distance between parallel axes: 25.0005 mm
+  distance feature points: 25.2839 mm
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=20:face B=20:edge
@@ -349,9 +361,9 @@ A=23:face B=23:edge
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=24:face B=24:edge
-  angle axis to plane: 0.0000 °
-  distance axis to plane: 0.0000 mm
-  distance feature points: 123.1818 mm
+  angle axis to plane: 90.0000 °
+  distance of axis point from plane: 0.0000 mm
+  distance feature points: 117.4486 mm
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=25:face B=25:edge
@@ -379,8 +391,9 @@ A=28:face B=28:edge
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=29:face B=29:edge
-  distance point to axis: 18.8083 mm
-  distance feature points: 18.8483 mm
+  angle between axes: 0.0003 °
+  distance between parallel axes: 25.0012 mm
+  distance feature points: 25.0313 mm
   point to point (pick points): 0.0000 mm
   dx, dy, dz: 0.0000, 0.0000, 0.0000
 A=30:face B=30:edge
@@ -454,7 +467,7 @@ Line edge (face 0) | length 1.00000 in | direction (-1.0000, -0.0000, 0.0000)
   : Pick feature B to measure from A.
 Plane (face 1, fit rms 0.00000 in) | normal (-1.0000, 0.0000, -0.0000)
   : Pick feature B to measure from A.
-Circle edge (face 1, fit rms 0.00000 in) | diameter 0.42190 in, radius 0.21095 in | centre (-3.5000, -1.3081, 9.5000)
+Circle edge (face 1, fit rms 0.00000 in) | diameter 0.42190 in, radius 0.21095 in | centre (-3.50000, -1.30809, 9.50000)
   diameter: 0.42190 in
   radius: 0.21095 in
   : Pick feature B to measure from A.
@@ -464,17 +477,19 @@ Line edge (face 2) | length 0.51249 in | direction (0.0000, 0.0000, 1.0000)
   : Pick feature B to measure from A.
 Plane (face 3, fit rms 0.00000 in) | normal (0.0000, 0.0000, 1.0000)
   : Pick feature B to measure from A.
-Line edge (face 3) | length 0.18081 in | direction (-0.6631, 0.7485, 0.0000)
+Circle edge (face 3, fit rms 0.00000 in) | diameter 1.50000 in, radius 0.75000 in | centre (8.00000, -0.00000, 2.15000)
+  diameter: 1.50000 in
+  radius: 0.75000 in
   : Pick feature B to measure from A.
 Plane (face 4, fit rms 0.00000 in) | normal (0.0000, 0.0000, 1.0000)
   : Pick feature B to measure from A.
-Circle edge (face 4, fit rms 0.00000 in) | diameter 1.50000 in, radius 0.75000 in | centre (7.5777, 4.3750, 1.0000)
+Circle edge (face 4, fit rms 0.00000 in) | diameter 1.50000 in, radius 0.75000 in | centre (7.57772, 4.37500, 1.00000)
   diameter: 1.50000 in
   radius: 0.75000 in
   : Pick feature B to measure from A.
 Plane (face 5, fit rms 0.00000 in) | normal (0.0000, 0.0000, 1.0000)
   : Pick feature B to measure from A.
-Circle edge (face 5, fit rms 0.00000 in) | diameter 1.50000 in, radius 0.75000 in | centre (7.5777, -4.3750, 1.0000)
+Circle edge (face 5, fit rms 0.00000 in) | diameter 1.50000 in, radius 0.75000 in | centre (7.57772, -4.37500, 1.00000)
   diameter: 1.50000 in
   radius: 0.75000 in
   : Pick feature B to measure from A.
@@ -482,7 +497,7 @@ Cylinder (face 6, fit rms 0.00000 in) | diameter 22.00000 in, radius 11.00000 in
   diameter: 22.00000 in
   radius: 11.00000 in
   : Pick feature B to measure from A.
-Circle edge (face 6, fit rms 0.00000 in) | diameter 22.00000 in, radius 11.00000 in | centre (-0.0000, 0.0000, 0.0000)
+Circle edge (face 6, fit rms 0.00000 in) | diameter 22.00000 in, radius 11.00000 in | centre (-0.00000, 0.00000, 0.00000)
   diameter: 22.00000 in
   radius: 11.00000 in
   : Pick feature B to measure from A.
@@ -490,13 +505,13 @@ Cylinder (face 7, fit rms 0.00000 in) | diameter 22.00000 in, radius 11.00000 in
   diameter: 22.00000 in
   radius: 11.00000 in
   : Pick feature B to measure from A.
-Circle edge (face 7, fit rms 0.00000 in) | diameter 22.00000 in, radius 11.00000 in | centre (0.0000, 0.0000, 0.0000)
+Circle edge (face 7, fit rms 0.00000 in) | diameter 22.00000 in, radius 11.00000 in | centre (0.00000, 0.00000, 0.00000)
   diameter: 22.00000 in
   radius: 11.00000 in
   : Pick feature B to measure from A.
 Plane (face 8, fit rms 0.00000 in) | normal (0.0000, 0.0000, -1.0000)
   : Pick feature B to measure from A.
-Circle edge (face 8, fit rms 0.00000 in) | diameter 0.75000 in, radius 0.37500 in | centre (7.5777, -4.3750, 0.0000)
+Circle edge (face 8, fit rms 0.00000 in) | diameter 0.75000 in, radius 0.37500 in | centre (7.57772, -4.37500, 0.00000)
   diameter: 0.75000 in
   radius: 0.37500 in
   : Pick feature B to measure from A.
@@ -504,11 +519,11 @@ Plane (face 9, fit rms 0.00000 in) | normal (-1.0000, -0.0000, -0.0000)
   : Pick feature B to measure from A.
 Line edge (face 9) | length 0.51249 in | direction (0.0000, 0.0000, 1.0000)
   : Pick feature B to measure from A.
-Cylinder (face 10, fit rms 0.00003 in) | diameter 12.00000 in, radius 6.00000 in | axis (0.0000, 0.0000, 1.0000)
+Cylinder (face 10, fit rms 0.00000 in) | diameter 12.00000 in, radius 6.00000 in | axis (-0.0000, 0.0000, 1.0000)
   diameter: 12.00000 in
   radius: 6.00000 in
   : Pick feature B to measure from A.
-Line edge (face 10) | length 0.60911 in | direction (0.4153, -0.8544, -0.3122)
+Curved edge (no line or circle fit): its mid point is used | (-6.00000, 0.00000, 2.40000)
   : Pick feature B to measure from A.
 Plane (face 11, fit rms 0.00000 in) | normal (-0.0000, -0.0000, 1.0000)
   : Pick feature B to measure from A.
@@ -518,19 +533,19 @@ Plane (face 12, fit rms 0.00000 in) | normal (-0.0000, 1.0000, -0.0000)
   : Pick feature B to measure from A.
 Line edge (face 12) | length 4.80544 in | direction (-1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
-Cylinder (face 13, fit rms 0.00011 in) | diameter 16.03115 in, radius 8.01558 in | axis (1.0000, 0.0008, -0.0002)
-  diameter: 16.03115 in
-  radius: 8.01558 in
+Cylinder (face 13, fit rms 0.00000 in) | diameter 15.99870 in, radius 7.99935 in | axis (1.0000, -0.0000, 0.0000)
+  diameter: 15.99870 in
+  radius: 7.99935 in
   : Pick feature B to measure from A.
-Line edge (face 13) | length 0.54576 in | direction (-0.2538, -0.9496, 0.1838)
+Curved edge (no line or circle fit): its mid point is used | (-5.97488, 1.77841, 2.04983)
   : Pick feature B to measure from A.
 Plane (face 14, fit rms 0.00000 in) | normal (0.0000, -0.0000, 1.0000)
   : Pick feature B to measure from A.
 Line edge (face 14) | length 2.37500 in | direction (-1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
-Cylinder (face 15, fit rms 0.00011 in) | diameter 16.03115 in, radius 8.01558 in | axis (1.0000, -0.0008, -0.0002)
-  diameter: 16.03115 in
-  radius: 8.01558 in
+Cylinder (face 15, fit rms 0.00000 in) | diameter 15.99870 in, radius 7.99935 in | axis (1.0000, 0.0000, 0.0000)
+  diameter: 15.99870 in
+  radius: 7.99935 in
   : Pick feature B to measure from A.
 Line edge (face 15) | length 4.80544 in | direction (1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
@@ -542,23 +557,21 @@ Plane (face 17, fit rms 0.00000 in) | normal (0.0000, -1.0000, 0.0000)
   : Pick feature B to measure from A.
 Line edge (face 17) | length 0.52648 in | direction (0.0000, 0.0000, 1.0000)
   : Pick feature B to measure from A.
-Cylinder (face 18, fit rms 0.00011 in) | diameter 16.03115 in, radius 8.01558 in | axis (1.0000, 0.0008, 0.0002)
-  diameter: 16.03115 in
-  radius: 8.01558 in
+Cylinder (face 18, fit rms 0.00000 in) | diameter 15.99870 in, radius 7.99935 in | axis (1.0000, -0.0000, -0.0000)
+  diameter: 15.99870 in
+  radius: 7.99935 in
   : Pick feature B to measure from A.
-Line edge (face 18) | length 0.54631 in | direction (-0.4078, -0.8668, -0.2870)
+Curved edge (no line or circle fit): its mid point is used | (5.79235, -2.27646, 1.91927)
   : Pick feature B to measure from A.
-Cylinder (face 19, fit rms 0.00011 in) | diameter 16.03115 in, radius 8.01558 in | axis (1.0000, -0.0008, 0.0002)
-  diameter: 16.03115 in
-  radius: 8.01558 in
+Cylinder (face 19, fit rms 0.00000 in) | diameter 15.99870 in, radius 7.99935 in | axis (1.0000, 0.0000, -0.0000)
+  diameter: 15.99870 in
+  radius: 7.99935 in
   : Pick feature B to measure from A.
-Circle edge (face 19, fit rms 0.00000 in) | diameter 41.82302 in, radius 20.91151 in | centre (8.2482, -19.2823, 5.4279)
-  diameter: 41.82302 in
-  radius: 20.91151 in
+Line edge (face 19) | length 4.25352 in | direction (1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
 Plane (face 20, fit rms 0.00000 in) | normal (0.0000, 1.0000, 0.0000)
   : Pick feature B to measure from A.
-Line edge (face 20) | length 0.03917 in | direction (-0.9683, 0.0000, 0.2498)
+Curved edge (no line or circle fit): its mid point is used | (5.54503, 2.75000, 1.76352)
   : Pick feature B to measure from A.
 Plane (face 21, fit rms 0.00000 in) | normal (0.0000, 1.0000, 0.0000)
   : Pick feature B to measure from A.
@@ -570,7 +583,7 @@ Line edge (face 22) | length 2.37500 in | direction (1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
 Plane (face 23, fit rms 0.00000 in) | normal (0.0000, 0.0000, 1.0000)
   : Pick feature B to measure from A.
-Circle edge (face 23, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-9.2500, -0.0000, 1.8000)
+Circle edge (face 23, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-9.25000, -0.00000, 1.80000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
@@ -578,7 +591,7 @@ Cylinder (face 24, fit rms 0.00000 in) | diameter 1.50000 in, radius 0.75000 in 
   diameter: 1.50000 in
   radius: 0.75000 in
   : Pick feature B to measure from A.
-Circle edge (face 24, fit rms 0.00000 in) | diameter 1.50000 in, radius 0.75000 in | centre (-8.0000, -0.0000, 2.1500)
+Circle edge (face 24, fit rms 0.00000 in) | diameter 1.50000 in, radius 0.75000 in | centre (-8.00000, -0.00000, 2.15000)
   diameter: 1.50000 in
   radius: 0.75000 in
   : Pick feature B to measure from A.
@@ -592,7 +605,7 @@ Line edge (face 26) | length 2.37500 in | direction (1.0000, 0.0000, 0.0000)
   : Pick feature B to measure from A.
 Plane (face 27, fit rms 0.00000 in) | normal (0.0000, -0.0000, 1.0000)
   : Pick feature B to measure from A.
-Circle edge (face 27, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (9.2500, -0.0000, 1.8000)
+Circle edge (face 27, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (9.25000, -0.00000, 1.80000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
@@ -602,73 +615,73 @@ Cylinder (face 28, fit rms 0.00000 in) | diameter 1.50000 in, radius 0.75000 in 
   : Pick feature B to measure from A.
 Line edge (face 28) | length 0.35000 in | direction (0.0000, 0.0000, -1.0000)
   : Pick feature B to measure from A.
-Surface (face 29: not a plane or a cylinder): its centroid is used | (-9.2500, 0.0000, 0.5690)
+Surface (face 29: not a plane or a cylinder): its centroid is used | (-9.25003, 0.00004, 0.56903)
   : Pick feature B to measure from A.
-Circle edge (face 29, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-9.2500, -0.0000, 0.6000)
+Circle edge (face 29, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-9.25000, -0.00000, 0.60000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Cylinder (face 30, fit rms 0.00002 in) | diameter 0.31250 in, radius 0.15625 in | axis (0.0000, -0.0000, 1.0000)
+Cylinder (face 30, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | axis (-0.0000, 0.0000, 1.0000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Circle edge (face 30, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-9.2500, -0.0000, 0.6000)
+Circle edge (face 30, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-9.25000, -0.00000, 0.60000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Surface (face 31: not a plane or a cylinder): its centroid is used | (-8.0000, 0.0000, 0.5690)
+Surface (face 31: not a plane or a cylinder): its centroid is used | (-8.00003, 0.00004, 0.56903)
   : Pick feature B to measure from A.
-Circle edge (face 31, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-8.0000, -0.0000, 0.6000)
+Circle edge (face 31, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-8.00000, -0.00000, 0.60000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Cylinder (face 32, fit rms 0.00002 in) | diameter 0.31250 in, radius 0.15625 in | axis (0.0000, -0.0000, 1.0000)
+Cylinder (face 32, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | axis (-0.0000, 0.0000, 1.0000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Circle edge (face 32, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-8.0000, -0.0000, 0.6000)
+Circle edge (face 32, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (-8.00000, -0.00000, 0.60000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Surface (face 33: not a plane or a cylinder): its centroid is used | (8.0000, 0.0000, 0.5690)
+Surface (face 33: not a plane or a cylinder): its centroid is used | (7.99997, 0.00004, 0.56903)
   : Pick feature B to measure from A.
-Circle edge (face 33, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (8.0000, -0.0000, 0.6000)
+Circle edge (face 33, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (8.00000, -0.00000, 0.60000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Cylinder (face 34, fit rms 0.00002 in) | diameter 0.31250 in, radius 0.15625 in | axis (0.0000, -0.0000, 1.0000)
+Cylinder (face 34, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | axis (-0.0000, 0.0000, 1.0000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Circle edge (face 34, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (8.0000, -0.0000, 0.6000)
+Circle edge (face 34, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (8.00000, -0.00000, 0.60000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Surface (face 35: not a plane or a cylinder): its centroid is used | (9.2500, 0.0000, 0.5690)
+Surface (face 35: not a plane or a cylinder): its centroid is used | (9.24997, 0.00004, 0.56903)
   : Pick feature B to measure from A.
-Circle edge (face 35, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (9.2500, -0.0000, 0.6000)
+Circle edge (face 35, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (9.25000, -0.00000, 0.60000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Cylinder (face 36, fit rms 0.00002 in) | diameter 0.31250 in, radius 0.15625 in | axis (0.0000, -0.0000, 1.0000)
+Cylinder (face 36, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | axis (-0.0000, 0.0000, 1.0000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Circle edge (face 36, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (9.2500, -0.0000, 0.6000)
+Circle edge (face 36, fit rms 0.00000 in) | diameter 0.31250 in, radius 0.15625 in | centre (9.25000, -0.00000, 0.60000)
   diameter: 0.31250 in
   radius: 0.15625 in
   : Pick feature B to measure from A.
-Cylinder (face 37, fit rms 0.00003 in) | diameter 10.00000 in, radius 5.00000 in | axis (-0.0000, -0.0000, 1.0000)
+Cylinder (face 37, fit rms 0.00000 in) | diameter 10.00000 in, radius 5.00000 in | axis (-0.0000, -0.0000, 1.0000)
   diameter: 10.00000 in
   radius: 5.00000 in
   : Pick feature B to measure from A.
-Circle edge (face 37, fit rms 0.00000 in) | diameter 10.00000 in, radius 5.00000 in | centre (0.0000, -0.0000, 0.3750)
+Circle edge (face 37, fit rms 0.00000 in) | diameter 10.00000 in, radius 5.00000 in | centre (0.00000, -0.00000, 0.37500)
   diameter: 10.00000 in
   radius: 5.00000 in
   : Pick feature B to measure from A.
 Plane (face 38, fit rms 0.00000 in) | normal (0.0000, 0.0000, -1.0000)
   : Pick feature B to measure from A.
-Circle edge (face 38, fit rms 0.00000 in) | diameter 10.00000 in, radius 5.00000 in | centre (0.0000, 0.0000, 4.0000)
+Circle edge (face 38, fit rms 0.00000 in) | diameter 10.00000 in, radius 5.00000 in | centre (0.00000, 0.00000, 4.00000)
   diameter: 10.00000 in
   radius: 5.00000 in
   : Pick feature B to measure from A.
@@ -676,7 +689,7 @@ Cylinder (face 39, fit rms 0.00000 in) | diameter 0.75000 in, radius 0.37500 in 
   diameter: 0.75000 in
   radius: 0.37500 in
   : Pick feature B to measure from A.
-Circle edge (face 39, fit rms 0.00000 in) | diameter 0.75000 in, radius 0.37500 in | centre (-7.5777, -4.3750, 0.0000)
+Circle edge (face 39, fit rms 0.00000 in) | diameter 0.75000 in, radius 0.37500 in | centre (-7.57772, -4.37500, 0.00000)
   diameter: 0.75000 in
   radius: 0.37500 in
   : Pick feature B to measure from A.
@@ -685,236 +698,232 @@ A=0:face B=0:edge
   distance axis to plane: 0.00000 in
   distance feature points: 3.00720 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=1:face B=1:edge
   angle axis to plane: 90.0000 °
-  distance of B point from plane A: 0.00000 in
+  distance of axis point from plane: 0.00000 in
   distance feature points: 1.40841 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=2:face B=2:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 2.81248 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=3:face B=3:edge
-  angle axis to plane: 0.0000 °
-  distance axis to plane: 0.00000 in
-  distance feature points: 0.63937 in
+  angle axis to plane: 90.0000 °
+  distance of axis point from plane: 0.00000 in
+  distance feature points: 0.15104 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=4:face B=4:edge
   angle axis to plane: 90.0000 °
-  distance of B point from plane A: 0.00000 in
+  distance of axis point from plane: 0.00000 in
   distance feature points: 7.97623 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=5:face B=5:edge
   angle axis to plane: 90.0000 °
-  distance of B point from plane A: 0.00000 in
+  distance of axis point from plane: 0.00000 in
   distance feature points: 7.97623 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=6:face B=6:edge
   angle between axes: 0.0000 °
   distance between parallel axes: 0.00000 in
   distance feature points: 0.50000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=7:face B=7:edge
   angle between axes: 0.0000 °
   distance between parallel axes: 0.00000 in
   distance feature points: 0.50000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=8:face B=8:edge
   angle axis to plane: 90.0000 °
-  distance of B point from plane A: 0.00000 in
+  distance of axis point from plane: 0.00000 in
   distance feature points: 8.75000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=9:face B=9:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 2.81248 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=10:face B=10:edge
-  angle between axes: 71.8076 °
-  shortest distance between axes: 5.99301 in
-  distance feature points: 6.09249 in
+  distance point to axis: 6.00000 in
+  distance feature points: 6.04384 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=11:face B=11:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 4.55536 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=12:face B=12:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 0.25990 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=13:face B=13:edge
-  angle between axes: 75.2510 °
-  shortest distance between axes: 8.01129 in
-  distance feature points: 8.27606 in
+  distance point to axis: 7.99935 in
+  distance feature points: 8.28229 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=14:face B=14:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 1.53434 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=15:face B=15:edge
-  angle between axes: 0.0450 °
-  shortest distance between axes: 7.98121 in
-  distance feature points: 8.01691 in
+  angle between axes: 0.0002 °
+  distance between parallel axes: 7.99935 in
+  distance feature points: 8.00074 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=16:face B=16:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 0.25990 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=17:face B=17:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 2.44564 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=18:face B=18:edge
-  angle between axes: 65.8878 °
-  shortest distance between axes: 8.01155 in
-  distance feature points: 8.37506 in
+  distance point to axis: 7.99935 in
+  distance feature points: 8.33145 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=19:face B=19:edge
-  angle between axes: 89.9955 °
-  shortest distance between axes: 20.80085 in
-  distance feature points: 22.29223 in
+  angle between axes: 0.0002 °
+  distance between parallel axes: 7.99935 in
+  distance feature points: 8.00036 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=20:face B=20:edge
-  angle axis to plane: 0.0000 °
-  distance axis to plane: 0.00000 in
-  distance feature points: 2.44113 in
+  distance point to plane: 0.00000 in
+  distance feature points: 2.39737 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=21:face B=21:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 1.18750 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=22:face B=22:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 0.17500 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=23:face B=23:edge
   angle axis to plane: 90.0000 °
-  distance of B point from plane A: 0.00000 in
+  distance of axis point from plane: 0.00000 in
   distance feature points: 0.34969 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=24:face B=24:edge
   angle between axes: 0.0000 °
   distance between parallel axes: 0.00000 in
   distance feature points: 0.17500 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=25:face B=25:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 0.17500 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=26:face B=26:edge
   angle axis to plane: 0.0000 °
   distance axis to plane: 0.00000 in
   distance feature points: 0.17500 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=27:face B=27:edge
   angle axis to plane: 90.0000 °
-  distance of B point from plane A: 0.00000 in
+  distance of axis point from plane: 0.00000 in
   distance feature points: 0.34969 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=28:face B=28:edge
   angle between axes: 0.0000 °
   distance between parallel axes: 0.75000 in
   distance feature points: 0.75000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=29:face B=29:edge
   distance point to axis: 0.00005 in
   distance feature points: 0.03097 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=30:face B=30:edge
-  angle between axes: 0.0030 °
-  distance between parallel axes: 0.00003 in
+  angle between axes: 0.0000 °
+  distance between parallel axes: 0.00000 in
   distance feature points: 0.60000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=31:face B=31:edge
   distance point to axis: 0.00005 in
   distance feature points: 0.03097 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=32:face B=32:edge
-  angle between axes: 0.0030 °
-  distance between parallel axes: 0.00003 in
+  angle between axes: 0.0000 °
+  distance between parallel axes: 0.00000 in
   distance feature points: 0.60000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=33:face B=33:edge
   distance point to axis: 0.00005 in
   distance feature points: 0.03097 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=34:face B=34:edge
-  angle between axes: 0.0030 °
-  distance between parallel axes: 0.00003 in
+  angle between axes: 0.0000 °
+  distance between parallel axes: 0.00000 in
   distance feature points: 0.60000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=35:face B=35:edge
   distance point to axis: 0.00005 in
   distance feature points: 0.03097 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=36:face B=36:edge
-  angle between axes: 0.0030 °
-  distance between parallel axes: 0.00003 in
+  angle between axes: 0.0000 °
+  distance between parallel axes: 0.00000 in
   distance feature points: 0.60000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=37:face B=37:edge
-  angle between axes: 0.0013 °
-  distance between parallel axes: 0.00004 in
+  angle between axes: 0.0000 °
+  distance between parallel axes: 0.00000 in
   distance feature points: 1.81251 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=38:face B=38:edge
   angle axis to plane: 90.0000 °
-  distance of B point from plane A: 0.00000 in
+  distance of axis point from plane: 0.00000 in
   distance feature points: 0.00000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 A=39:face B=39:edge
   angle between axes: 0.0000 °
   distance between parallel axes: 0.00000 in
   distance feature points: 0.25000 in
   point to point (pick points): 0.00000 in
-  dx, dy, dz: 0.0000, 0.0000, 0.0000
+  dx, dy, dz: 0.00000, 0.00000, 0.00000
 "
 `;

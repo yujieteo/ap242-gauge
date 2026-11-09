@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test';
 import fc from 'fast-check';
-import { UNITS, basis, cross, dot, eigSym3, extractFaces, fitCircle2, fitFace, len, measure, norm, parseStepLengthUnit, scale, add } from '../src/geom.ts';
-import type { Face, Feature, Vec3 } from '../src/geom.ts';
+import { UNITS, basis, boundary, cross, dot, eigSym3, extractFaces, faceEdge, fitCircle2, fitFace, len, measure, norm, parseStepLengthUnit, scale, add } from '../src/geom.ts';
+import type { EdgeFit, Face, Feature, Vec3 } from '../src/geom.ts';
+import { describe, measureRows } from '../src/format.ts';
 import { parseOcctResult } from '../src/occt.ts';
 
 const coord = fc.double({ min: -100, max: 100, noNaN: true });
@@ -163,4 +164,106 @@ test('extractFaces: one face per group with nine numbers per triangle', () => {
       expect(f.id).toBe(g);
     });
   }));
+});
+
+function outlineFace(outline: readonly Vec3[], hub: Vec3): Face {
+  const tris: number[] = [];
+  outline.forEach((p, i) => { tris.push(...p, ...(outline[(i + 1) % outline.length] ?? p), ...hub); });
+  return { id: 0, mesh: 0, tri: Float64Array.from(tris) };
+}
+
+function arc(cx: number, cy: number, r: number, fromDeg: number, toDeg: number, chords: number): Vec3[] {
+  return Array.from({ length: chords + 1 }, (_, k): Vec3 => {
+    const a = (fromDeg + ((toDeg - fromDeg) * k) / chords) * Math.PI / 180;
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a), 3];
+  });
+}
+
+function edgeAtChord(face: Face, outline: readonly Vec3[], i: number): EdgeFit {
+  const a = outline[i], b = outline[(i + 1) % outline.length];
+  if (!a || !b) throw new Error('no chord ' + i);
+  const edge = faceEdge(face, scale(add(a, b), 0.5));
+  if (!edge) throw new Error('no edge at chord ' + i);
+  return edge;
+}
+
+test('faceEdge: a slot gives its arcs as circles and its sides as lines', () => {
+  fc.assert(fc.property(fc.double({ min: 0.2, max: 40, noNaN: true }), fc.double({ min: 0.5, max: 200, noNaN: true }), fc.integer({ min: 5, max: 24 }), (r, half, chords) => {
+    const outline = [...arc(half, 0, r, -90, 90, chords), ...arc(-half, 0, r, 90, 270, chords)];
+    const face = outlineFace(outline, [0, 0, 3]);
+    outline.forEach((_, i) => {
+      const edge = edgeAtChord(face, outline, i);
+      if (i === chords || i === 2 * chords + 1) {
+        if (edge.type !== 'line') throw new Error('side ' + i + ' is ' + edge.type);
+        expect(Math.abs(edge.length - 2 * half)).toBeLessThan(1e-9 * (1 + half));
+      } else {
+        if (edge.type !== 'circle') throw new Error('arc chord ' + i + ' is ' + edge.type);
+        expect(Math.abs(edge.radius - r)).toBeLessThan(1e-6 * r);
+      }
+    });
+  }));
+});
+
+test('faceEdge: a small arc beside a long straight edge keeps its own radius', () => {
+  const outline: Vec3[] = [[-5.834, 0, 3], ...arc(0, 0.25, 0.25, -90, -90 + 12.51, 3), [-5.834, 4, 3]];
+  const face = outlineFace(outline, [-3, 1, 3]);
+  expect(edgeAtChord(face, outline, 0).type).toBe('line');
+  for (const i of [1, 2, 3]) {
+    const edge = edgeAtChord(face, outline, i);
+    if (edge.type !== 'circle') throw new Error('arc chord ' + i + ' is ' + edge.type);
+    expect(Math.abs(edge.radius - 0.25)).toBeLessThan(1e-9);
+  }
+});
+
+test('faceEdge: a chord of an ellipse is a curved edge, never a line or a circle', () => {
+  const outline = Array.from({ length: 48 }, (_, k): Vec3 => [30 * Math.cos((k * Math.PI) / 24), 10 * Math.sin((k * Math.PI) / 24), 3]);
+  const face = outlineFace(outline, [0, 0, 3]);
+  outline.forEach((_, i) => { expect(edgeAtChord(face, outline, i).type).toBe('polyline'); });
+});
+
+test('faceEdge: two straight edges at a shallow angle are lines, not a circle', () => {
+  const outline: Vec3[] = [[0, 0, 3], [40, 0, 3], [70, 12, 3], [30, 60, 3]];
+  const face = outlineFace(outline, [35, 15, 3]);
+  const first = edgeAtChord(face, outline, 0), second = edgeAtChord(face, outline, 1);
+  if (first.type !== 'line' || second.type !== 'line') throw new Error('got ' + first.type + ' and ' + second.type);
+  expect(Math.abs(first.length - 40)).toBeLessThan(1e-9);
+  expect(Math.abs(second.length - Math.hypot(30, 12))).toBeLessThan(1e-9);
+});
+
+test('boundary: a triangle fan has its outline as boundary, each segment once', () => {
+  fc.assert(fc.property(fc.integer({ min: 3, max: 60 }), (n) => {
+    const outline = arc(0, 0, 10, 0, 360 - 360 / n, n - 1);
+    const { first, segs } = boundary(outlineFace(outline, [0, 0, 3]).tri);
+    expect(first.length).toBe(n + 1);
+    expect(segs.length).toBe(2 * n);
+  }));
+});
+
+const STEP_INCH_AFTER_ITS_BASE = `DATA;
+#10=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));
+#11=LENGTH_MEASURE_WITH_UNIT(LENGTH_MEASURE(25.4),#10);
+#12=(CONVERSION_BASED_UNIT('INCH',#11)LENGTH_UNIT()NAMED_UNIT(#13));
+#20=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#21))
+GLOBAL_UNIT_ASSIGNED_CONTEXT((#12,#14,#15))REPRESENTATION_CONTEXT('',''));
+ENDSEC;`;
+
+test('parseStepLengthUnit: the unit of the geometric context wins over the base unit of a conversion', () => {
+  expect(parseStepLengthUnit(STEP_INCH_AFTER_ITS_BASE)).toBe(UNITS.in);
+  expect(parseStepLengthUnit(STEP_INCH_AFTER_ITS_BASE.replace('((#12,#14,#15))', '( ( #14 , #10 ) )'))).toBe(UNITS.mm);
+  expect(parseStepLengthUnit('#1=( LENGTH_UNIT ( ) NAMED_UNIT(*) SI_UNIT($,.METRE.) );')).toBe(UNITS.m);
+  expect(parseStepLengthUnit('no units here')).toBe(UNITS.mm);
+});
+
+test('measure: an axis picked first and a plane second is not labelled as plane A', () => {
+  const plane: Feature = { kind: 'plane', point: [0, 0, 0], normal: [0, 0, 1] };
+  const axis: Feature = { kind: 'axis', point: [1, 2, 5], dir: norm([1, 0, 1]) };
+  expect(measure(axis, plane)).toEqual(measure(plane, axis));
+  for (const m of measure(axis, plane)) expect(m.label).not.toMatch(/\b[AB]\b/);
+});
+
+test('panel text: a file in metres keeps a tenth of a micrometre', () => {
+  const fit = { type: 'cylinder', point: [0, 0, 0], dir: [0, 0, 1], radius: 0.003175, rms: 0, size: 0.01 } as const;
+  expect(describe(0, fit, UNITS.m)[1]).toBe('diameter 0.0063500 m, radius 0.0031750 m');
+  const pick = { face: 0, mode: 'face', fit, feature: { kind: 'axis', point: fit.point, dir: fit.dir }, hit: [0.00125, 0, 0] } as const;
+  expect(measureRows([pick], UNITS.m)[0]).toEqual(['diameter', '0.0063500 m']);
 });
