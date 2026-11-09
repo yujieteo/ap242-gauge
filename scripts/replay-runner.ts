@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -19,13 +19,6 @@ function reviveFace(value: unknown): unknown {
   return { ...value, tri: Float64Array.from(value['tri'].map(Number)) };
 }
 
-function legacyMeshes(meshes: unknown): unknown {
-  if (!Array.isArray(meshes)) return meshes;
-  return { meshes: meshes.map((m: unknown) => (isRecord(m)
-    ? { attributes: { position: { array: m['position'] } }, index: { array: m['index'] }, brep_faces: m['brepFaces'] }
-    : m)) };
-}
-
 function faceDigest(face: unknown): unknown {
   if (!isRecord(face) || !(face['tri'] instanceof Float64Array)) return face;
   const tri = face['tri'];
@@ -35,10 +28,7 @@ function faceDigest(face: unknown): unknown {
 const [repoDir, inputsFile, outFile] = process.argv.slice(2);
 if (!repoDir || !inputsFile || !outFile) throw new Error('usage: replay-runner <repo dir> <inputs file> <output file>');
 
-const tsPath = join(repoDir, 'src/geom.ts');
-const legacy = !existsSync(tsPath);
-const loaded: unknown = await import(legacy ? join(repoDir, 'src/geom.js') : tsPath);
-const api: unknown = isRecord(loaded) && 'fitFace' in loaded ? loaded : isRecord(loaded) ? loaded['default'] : undefined;
+const api: unknown = await import(join(repoDir, 'src/geom.ts'));
 
 function call(name: string, args: readonly unknown[]): unknown {
   const fn: unknown = isRecord(api) ? api[name] : undefined;
@@ -50,7 +40,7 @@ function run(fn: string, input: unknown): unknown {
   switch (fn) {
     case 'parseStepLengthUnit': return call(fn, [input]);
     case 'extractFaces': {
-      const faces = call(fn, [legacy ? legacyMeshes(input) : input]);
+      const faces = call(fn, [input]);
       return Array.isArray(faces) ? faces.map(faceDigest) : faces;
     }
     case 'fitFace': return call(fn, [reviveFace(input)]);

@@ -1172,33 +1172,45 @@ else if (typeof define === 'function' && define['amd'])
       return UNITS.m;
     return null;
   }
+  function unitOfRecord(body) {
+    if (!/LENGTH_UNIT\s*\(\s*\)/.test(body))
+      return null;
+    const conv = /CONVERSION_BASED_UNIT\s*\(\s*'([^']*)'/i.exec(body);
+    if (conv)
+      return unitFromConversionName(must(conv[1]));
+    const si = /SI_UNIT\s*\(\s*([^,]*),\s*\.METRE\.\s*\)/i.exec(body);
+    return si ? unitFromSiPrefix(must(si[1])) : null;
+  }
+  function recordsWith(text, word) {
+    const out = [];
+    for (let i = text.indexOf(word);i >= 0; ) {
+      const end = text.indexOf(";", i);
+      const stop = end < 0 ? text.length : end;
+      out.push(text.slice(text.lastIndexOf(";", i) + 1, stop));
+      i = text.indexOf(word, stop);
+    }
+    return out;
+  }
   function parseStepLengthUnit(text) {
-    const flat = text.replace(/\s+/g, " ");
-    const records = flat.split(";");
     const byId = new Map;
-    for (const r of records) {
-      const m = /^\s*#(\d+)\s*=\s*(.*)$/.exec(r);
-      if (m)
-        byId.set(must(m[1]), must(m[2]));
+    let firstUnit = null;
+    for (const record of recordsWith(text, "LENGTH_UNIT")) {
+      const m = /^\s*#(\d+)\s*=([\s\S]*)$/.exec(record);
+      const unit = m ? unitOfRecord(must(m[2])) : null;
+      if (!m || !unit)
+        continue;
+      byId.set(must(m[1]), unit);
+      firstUnit = firstUnit ?? unit;
     }
-    for (const body of byId.values()) {
-      if (!/LENGTH_UNIT\s*\(\s*\)/i.test(body))
-        continue;
-      const conv = /CONVERSION_BASED_UNIT\s*\(\s*'([^']*)'/i.exec(body);
-      if (conv) {
-        const unit = unitFromConversionName(must(conv[1]));
-        if (unit)
-          return unit;
-        continue;
-      }
-      const si = /SI_UNIT\s*\(\s*([^,]*),\s*\.METRE\.\s*\)/i.exec(body);
-      if (si) {
-        const unit = unitFromSiPrefix(must(si[1]));
+    for (const record of recordsWith(text, "GLOBAL_UNIT_ASSIGNED_CONTEXT")) {
+      const refs = /GLOBAL_UNIT_ASSIGNED_CONTEXT\s*\(\s*\(([^)]*)\)/.exec(record);
+      for (const ref of refs ? must(refs[1]).split(",") : []) {
+        const unit = byId.get(ref.trim().slice(1));
         if (unit)
           return unit;
       }
     }
-    return DEFAULT_UNIT;
+    return firstUnit ?? DEFAULT_UNIT;
   }
   function extractFaces(meshes) {
     const faces = [];
@@ -1208,6 +1220,8 @@ else if (typeof define === 'function' && define['amd'])
       const groups = mesh.brepFaces.length ? mesh.brepFaces : [{ first: 0, last: idx.length / 3 - 1 }];
       for (const g of groups) {
         const n = g.last - g.first + 1;
+        if (!(n > 0))
+          continue;
         const tri = new Float64Array(n * 9);
         for (let t = 0;t < n; t++) {
           for (let k = 0;k < 3; k++) {
@@ -1335,6 +1349,8 @@ else if (typeof define === 'function' && define['amd'])
     }
     return out;
   }
+  var CYLINDER_REFINE_GATE = 0.01;
+  var CYLINDER_REFINE_STEP = 0.02;
   var emptyBounds = () => ({ lo: [Infinity, Infinity, Infinity], hi: [-Infinity, -Infinity, -Infinity] });
   function fitFace(face) {
     const tri = face.tri, nt = tri.length / 9;
@@ -1376,94 +1392,101 @@ else if (typeof define === 'function' && define['amd'])
       }
       return { type: "plane", point: c, normal: s < 0 ? scale(pn, -1) : pn, rms: planeRms, size };
     }
-    const axis = eigSym3(N).vectors[0];
-    const [u, v] = basis(axis);
-    const p2 = pts.map((p) => [dot(p, u), dot(p, v)]);
-    const circ = fitCircle2(p2);
-    if (circ) {
+    const across = (axis) => {
+      const [u, v] = basis(axis);
+      const circ = fitCircle2(pts.map((p) => [dot(p, u), dot(p, v)]));
+      if (!circ)
+        return null;
       let ss = 0;
-      for (let i = 0;i < pts.length; i++) {
-        const q = must(p2[i]);
-        const d = Math.hypot(q[0] - circ.cx, q[1] - circ.cy) - circ.r;
-        ss += must(pts[i])[3] * d * d;
+      for (const p of pts) {
+        const d = Math.hypot(dot(p, u) - circ.cx, dot(p, v) - circ.cy) - circ.r;
+        ss += p[3] * d * d;
       }
-      const cylRms = Math.sqrt(ss / W);
-      if (cylRms <= tol) {
-        const onAxis = add(add(scale(u, circ.cx), scale(v, circ.cy)), scale(axis, dot(c, axis)));
-        return { type: "cylinder", point: onAxis, dir: axis, radius: circ.r, rms: cylRms, size };
+      return { axis, u, v, circ, rms: Math.sqrt(ss / W) };
+    };
+    let best = across(eigSym3(N).vectors[0]);
+    if (best && best.rms <= CYLINDER_REFINE_GATE * size) {
+      for (let step = CYLINDER_REFINE_STEP, tries = 0;step > 0.0000000000001 && best.rms > 0.0000000000001 * size && tries < 400; tries++) {
+        const from = best;
+        for (const side of [from.u, scale(from.u, -1), from.v, scale(from.v, -1)]) {
+          const next = across(norm(add(from.axis, scale(side, step))));
+          if (next && next.rms < best.rms)
+            best = next;
+        }
+        if (best === from)
+          step /= 2;
       }
+    }
+    if (best && best.rms <= tol) {
+      const onAxis = add(add(scale(best.u, best.circ.cx), scale(best.v, best.circ.cy)), scale(best.axis, dot(c, best.axis)));
+      return { type: "cylinder", point: onAxis, dir: best.axis, radius: best.circ.r, rms: best.rms, size };
     }
     return { type: "surface", point: c, rms: null, size };
   }
   var EDGE_CHAIN_TURN_DEG = 40;
   var EDGE_STRAIGHT_TURN_DEG = 0.5;
-  function faceEdge(face, hit) {
-    const e = faceEdgeChain(face, hit, EDGE_CHAIN_TURN_DEG);
-    if (!e || e.type !== "polyline")
-      return e;
-    const straight = faceEdgeChain(face, hit, EDGE_STRAIGHT_TURN_DEG);
-    return straight && straight.type === "line" ? straight : e;
-  }
-  function faceEdgeChain(face, hit, maxTurnDeg) {
-    const tri = face.tri, nt = tri.length / 9;
-    const keyOf = (p) => [p[0], p[1], p[2]].map((x) => Math.round(x * 1e6)).join(",");
-    const vid = new Map;
-    const verts = [];
-    const id = (p) => {
-      const k = keyOf(p);
-      const known = vid.get(k);
-      if (known !== undefined)
-        return known;
-      vid.set(k, verts.length);
-      verts.push(p);
-      return verts.length - 1;
-    };
+  var ARC_MIN_POINTS = 4;
+  var ARC_FREE_POINTS = 5;
+  var UNIFORM_CHORD = 0.001;
+  var FACET_TURN_RATIO = 0.7;
+  var FACET_LENGTH_RATIO = 2;
+  function boundary(tri) {
+    const nv = tri.length / 3;
+    const ids = new Map;
+    const first = [];
+    const vid = new Int32Array(nv);
+    for (let i = 0;i < nv; i++) {
+      const key = Math.round(at(tri, i * 3) * 1e6) + "," + Math.round(at(tri, i * 3 + 1) * 1e6) + "," + Math.round(at(tri, i * 3 + 2) * 1e6);
+      let id = ids.get(key);
+      if (id === undefined) {
+        id = first.length;
+        ids.set(key, id);
+        first.push(i);
+      }
+      vid[i] = id;
+    }
+    const n = first.length;
     const count = new Map;
-    for (let t = 0;t < nt; t++) {
-      const ids = [id(vertexAt(tri, t * 3)), id(vertexAt(tri, t * 3 + 1)), id(vertexAt(tri, t * 3 + 2))];
+    for (let i = 0;i < nv; i += 3) {
       for (const k of AXES) {
-        const a = ids[k], b = ids[NEXT_AXIS[k]];
+        const a = at(vid, i + k), b = at(vid, i + NEXT_AXIS[k]);
         if (a === b)
           continue;
-        const lo = Math.min(a, b), hi = Math.max(a, b);
-        const ek = lo + "_" + hi;
-        const known = count.get(ek);
-        if (known)
-          known.n++;
-        else
-          count.set(ek, { a: lo, b: hi, n: 1 });
+        const key = a < b ? a * n + b : b * n + a;
+        count.set(key, (count.get(key) ?? 0) + 1);
       }
     }
-    const adj = new Map;
-    const link = (a, b) => {
-      const list = adj.get(a);
-      if (list)
-        list.push(b);
-      else
-        adj.set(a, [b]);
-    };
-    let best = null, bestD = Infinity;
-    for (const edge of count.values()) {
-      if (edge.n !== 1)
-        continue;
-      const { a, b } = edge;
-      link(a, b);
-      link(b, a);
+    const segs = [];
+    for (const [key, uses] of count)
+      if (uses === 1)
+        segs.push(Math.floor(key / n), key % n);
+    return { first, segs };
+  }
+  function faceEdge(face, hit) {
+    const { first, segs } = boundary(face.tri);
+    const verts = first.map((i) => vertexAt(face.tri, i));
+    const adj = verts.map(() => []);
+    let seed = null, bestD = Infinity;
+    for (let i = 0;i < segs.length; i += 2) {
+      const a = must(segs[i]), b = must(segs[i + 1]);
+      must(adj[a]).push(b);
+      must(adj[b]).push(a);
       const d = distPointSegment(hit, must(verts[a]), must(verts[b]));
       if (d < bestD) {
         bestD = d;
-        best = [a, b];
+        seed = [a, b];
       }
     }
-    if (!best)
+    if (!seed)
       return null;
-    const cosMax = Math.cos(maxTurnDeg / DEG);
-    const walk = (from, to, seen) => {
+    const cosMax = Math.cos(EDGE_CHAIN_TURN_DEG / DEG);
+    const seen = new Set(seed);
+    const walk = (from, to) => {
       const out = [];
       let prev = from, cur = to;
       for (;; ) {
         const dirIn = norm(sub(must(verts[cur]), must(verts[prev])));
-        const next = (adj.get(cur) ?? []).filter((n) => n !== prev && !seen.has(n));
+        const next = must(adj[cur]).filter((n) => n !== prev && !seen.has(n));
         const only = next[0];
         if (next.length !== 1 || only === undefined)
           break;
@@ -1477,58 +1500,137 @@ else if (typeof define === 'function' && define['amd'])
       }
       return out;
     };
-    const seen = new Set(best);
-    const fwd = walk(best[0], best[1], seen);
-    const back = walk(best[1], best[0], seen);
-    const chain = [...back.reverse(), best[0], best[1], ...fwd].map((i) => must(verts[i]));
-    const first = must(chain[0]), last = must(chain[chain.length - 1]);
-    const closed = chain.length > 3 && (adj.get(must(vid.get(keyOf(first)))) ?? []).includes(must(vid.get(keyOf(last))));
-    return fitEdgeChain(chain, closed);
+    const fwd = walk(seed[0], seed[1]);
+    const back = walk(seed[1], seed[0]).reverse();
+    const ids = [...back, seed[0], seed[1], ...fwd];
+    const closed = ids.length > 3 && must(adj[must(ids[0])]).includes(must(ids[ids.length - 1]));
+    const chain = ids.map((i) => must(verts[i]));
+    const whole = fitEdgeChain(chain, closed);
+    return whole.type === "polyline" ? fitEdgeRun(chain, closed, back.length) ?? whole : whole;
   }
   function distPointSegment(p, a, b) {
     const ab = sub(b, a), t = Math.max(0, Math.min(1, dot(sub(p, a), ab) / (dot(ab, ab) || 1)));
     return len(sub(p, add(a, scale(ab, t))));
   }
-  function fitEdgeChain(chain, closed) {
-    const a = must(chain[0]), b = must(chain[chain.length - 1]);
-    const L = len(sub(b, a));
+  function chainTol(chain) {
     const { lo, hi } = emptyBounds();
     for (const p of chain)
       for (const k of AXES) {
         lo[k] = Math.min(lo[k], p[k]);
         hi[k] = Math.max(hi[k], p[k]);
       }
-    const size = len(sub(hi, lo));
-    const tol = Math.max(0.0001 * size, 0.0000001);
-    if (!closed && L > 0) {
-      const d = scale(sub(b, a), 1 / L);
-      let worst = 0;
-      for (const p of chain)
-        worst = Math.max(worst, len(cross(sub(p, a), d)));
-      if (worst <= tol)
-        return { type: "line", point: scale(add(a, b), 0.5), dir: d, length: L, ends: [a, b], rms: worst };
+    return Math.max(0.0001 * len(sub(hi, lo)), 0.0000001);
+  }
+  function fitLine(chain) {
+    const a = must(chain[0]), b = must(chain[chain.length - 1]);
+    const L = len(sub(b, a));
+    if (!(L > 0))
+      return null;
+    const d = scale(sub(b, a), 1 / L);
+    let worst = 0;
+    for (const p of chain)
+      worst = Math.max(worst, len(cross(sub(p, a), d)));
+    return worst <= chainTol(chain) ? { type: "line", point: scale(add(a, b), 0.5), dir: d, length: L, ends: [a, b], rms: worst } : null;
+  }
+  function fitCircle(chain) {
+    if (chain.length < 3)
+      return null;
+    const pts = chain.map((p) => [p[0], p[1], p[2], 1]);
+    const { c, C } = moments(pts);
+    const n = eigSym3(C).vectors[0];
+    const [u, v] = basis(n);
+    const p2 = chain.map((p) => [dot(p, u), dot(p, v)]);
+    const circ = fitCircle2(p2);
+    if (!circ)
+      return null;
+    let ss = 0;
+    for (const p of p2) {
+      const d = Math.hypot(p[0] - circ.cx, p[1] - circ.cy) - circ.r;
+      ss += d * d;
     }
-    if (chain.length >= 3) {
-      const pts = chain.map((p) => [p[0], p[1], p[2], 1]);
-      const { c, C } = moments(pts);
-      const n = eigSym3(C).vectors[0];
-      const [u, v] = basis(n);
-      const p2 = chain.map((p) => [dot(p, u), dot(p, v)]);
-      const circ = fitCircle2(p2);
-      if (circ) {
-        let ss = 0;
-        for (const p of p2) {
-          const d = Math.hypot(p[0] - circ.cx, p[1] - circ.cy) - circ.r;
-          ss += d * d;
-        }
-        const rms = Math.sqrt(ss / p2.length);
-        if (rms <= tol) {
-          const center = add(add(scale(u, circ.cx), scale(v, circ.cy)), scale(n, dot(c, n)));
-          return { type: "circle", point: center, dir: n, radius: circ.r, rms, ends: [a, b] };
+    const rms = Math.sqrt(ss / p2.length);
+    if (rms > Math.max(0.0001 * chordRange(chain)[0], 0.0000001))
+      return null;
+    const center = add(add(scale(u, circ.cx), scale(v, circ.cy)), scale(n, dot(c, n)));
+    return { type: "circle", point: center, dir: n, radius: circ.r, rms, ends: [must(chain[0]), must(chain[chain.length - 1])] };
+  }
+  function chordRange(chain) {
+    let lo = Infinity, hi = 0;
+    for (let i = 1;i < chain.length; i++) {
+      const l = len(sub(must(chain[i]), must(chain[i - 1])));
+      lo = Math.min(lo, l);
+      hi = Math.max(hi, l);
+    }
+    return [lo, hi];
+  }
+  function uniformChords(chain) {
+    const [lo, hi] = chordRange(chain);
+    return hi - lo <= UNIFORM_CHORD * hi;
+  }
+  var looksLikeArc = (chain, minPoints) => chain.length >= ARC_FREE_POINTS || chain.length >= minPoints && uniformChords(chain);
+  function fitEdgeChain(chain, closed) {
+    const line = closed ? null : fitLine(chain);
+    if (line)
+      return line;
+    const circle = looksLikeArc(chain, 3) ? fitCircle(chain) : null;
+    if (circle)
+      return circle;
+    return { type: "polyline", point: must(chain[Math.floor(chain.length / 2)]), ends: [must(chain[0]), must(chain[chain.length - 1])], rms: null };
+  }
+  function fitEdgeRun(chain, closed, s) {
+    const n = chain.length;
+    const P = (i) => must(chain[(i % n + n) % n]);
+    const run = (a, b) => {
+      const out = [];
+      for (let i = a;i <= b; i++)
+        out.push(P(i));
+      return out;
+    };
+    const turn = (i) => {
+      if (!closed && (i <= 0 || i >= n - 1))
+        return null;
+      const d = dot(norm(sub(P(i), P(i - 1))), norm(sub(P(i + 1), P(i))));
+      const t = Math.acos(Math.max(-1, Math.min(1, d))) * DEG;
+      return t > EDGE_CHAIN_TURN_DEG ? null : t;
+    };
+    const grow = (a, b, leftFirst, ok) => {
+      for (const left of [leftFirst, !leftFirst]) {
+        for (;; ) {
+          if (b - a >= n - 1 || turn(left ? a : b) === null)
+            break;
+          if (!ok(left ? a - 1 : a, left ? b : b + 1, left ? a : b))
+            break;
+          if (left)
+            a--;
+          else
+            b++;
         }
       }
+      return [a, b];
+    };
+    const straight = grow(s, s + 1, true, (_a, _b, joint) => (turn(joint) ?? Infinity) <= EDGE_STRAIGHT_TURN_DEG);
+    if (straight[1] - straight[0] >= 2) {
+      const line = fitLine(run(straight[0], straight[1]));
+      if (line)
+        return line;
     }
-    return { type: "polyline", point: must(chain[Math.floor(chain.length / 2)]), ends: [a, b], rms: null };
+    const onCircle = (a, b) => fitCircle(run(a, b)) !== null;
+    const arcL = grow(s, s + 1, true, onCircle), arcR = grow(s, s + 1, false, onCircle);
+    const arc = arcL[1] - arcL[0] >= arcR[1] - arcR[0] ? arcL : arcR;
+    const arcPoints = run(arc[0], arc[1]);
+    if (looksLikeArc(arcPoints, ARC_MIN_POINTS))
+      return fitCircle(arcPoints);
+    const seedLength = len(sub(P(s + 1), P(s)));
+    const facetOf = (joint, step) => {
+      const t0 = turn(joint), t1 = turn(joint + step);
+      if (t0 === null || t1 === null || t0 <= FACET_TURN_RATIO * t1 || t1 <= FACET_TURN_RATIO * t0)
+        return false;
+      const l = len(sub(P(joint + step), P(joint)));
+      return l <= FACET_LENGTH_RATIO * seedLength && seedLength <= FACET_LENGTH_RATIO * l;
+    };
+    if (facetOf(s, -1) || facetOf(s + 1, 1))
+      return null;
+    return fitLine(run(s, s + 1));
   }
   function featureFrom(fit) {
     switch (fit.type) {
@@ -1574,7 +1676,7 @@ else if (typeof define === 'function' && define['amd'])
       if (a <= PARALLEL_DEG)
         L("distance axis to plane", Math.abs(dot(dp, A.normal)));
       else
-        L("distance of B point from plane A", Math.abs(dot(dp, A.normal)));
+        L("distance of axis point from plane", Math.abs(dot(dp, A.normal)));
     } else if (A.kind === "plane" && B.kind === "point") {
       L("distance point to plane", Math.abs(dot(dp, A.normal)));
     } else if (A.kind === "axis" && B.kind === "axis") {
@@ -1593,12 +1695,14 @@ else if (typeof define === 'function' && define['amd'])
   }
 
   // src/format.ts
-  var fmtLen = (unit, x) => x.toFixed(unit.label === "in" ? 5 : 4) + " " + unit.label;
-  var fmtVec = (v) => "(" + v.map((x) => x.toFixed(4)).join(", ") + ")";
+  var DECIMALS = { mm: 4, cm: 5, m: 7, in: 5, ft: 6 };
+  var fmtLen = (unit, x) => x.toFixed(DECIMALS[unit.label]) + " " + unit.label;
+  var fmtVec = (v, decimals = 4) => "(" + v.map((x) => x.toFixed(decimals)).join(", ") + ")";
   var HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
   var escapeHtml = (s) => s.replace(/[&<>]/g, (c) => HTML_ESCAPES[c] ?? c);
   function describe(face, f, unit) {
     const rms = f.rms === null ? "" : ", fit rms " + fmtLen(unit, f.rms);
+    const place = (v) => fmtVec(v, DECIMALS[unit.label]);
     switch (f.type) {
       case "plane":
         return ["Plane (face " + face + rms + ")", "normal " + fmtVec(f.normal)];
@@ -1607,13 +1711,13 @@ else if (typeof define === 'function' && define['amd'])
       case "line":
         return ["Line edge (face " + face + ")", "length " + fmtLen(unit, f.length), "direction " + fmtVec(f.dir)];
       case "circle":
-        return ["Circle edge (face " + face + rms + ")", "diameter " + fmtLen(unit, 2 * f.radius) + ", radius " + fmtLen(unit, f.radius), "centre " + fmtVec(f.point)];
+        return ["Circle edge (face " + face + rms + ")", "diameter " + fmtLen(unit, 2 * f.radius) + ", radius " + fmtLen(unit, f.radius), "centre " + place(f.point)];
       case "vertex":
-        return ["Point", fmtVec(f.point)];
+        return ["Point", place(f.point)];
       case "polyline":
-        return ["Curved edge (no line or circle fit): its mid point is used", fmtVec(f.point)];
+        return ["Curved edge (no line or circle fit): its mid point is used", place(f.point)];
       case "surface":
-        return ["Surface (face " + face + ": not a plane or a cylinder): its centroid is used", fmtVec(f.point)];
+        return ["Surface (face " + face + ": not a plane or a cylinder): its centroid is used", place(f.point)];
     }
   }
   function measurementText(m, unit) {
@@ -1627,7 +1731,7 @@ else if (typeof define === 'function' && define['amd'])
         rows.push([m.label, measurementText(m, unit)]);
       const d = sub(b.hit, a.hit);
       rows.push(["point to point (pick points)", fmtLen(unit, len(d))]);
-      rows.push(["dx, dy, dz", d.map((x) => x.toFixed(4)).join(", ")]);
+      rows.push(["dx, dy, dz", d.map((x) => x.toFixed(DECIMALS[unit.label])).join(", ")]);
     } else if (picks.length === 1) {
       const f = picks[0].fit;
       if (f.type === "cylinder" || f.type === "circle")
@@ -2011,6 +2115,10 @@ else if (typeof define === 'function' && define['amd'])
       return;
     }
     const faces = extractFaces(result.meshes);
+    if (!faces.length) {
+      setStatus(file.name + " has no surfaces to show");
+      return;
+    }
     setModel(file.name, unit, faces, result.meshes);
     setStatus(file.name + ": " + result.meshes.length + " part mesh(es), " + faces.length + " faces, unit " + unit.label + " (" + Math.round(performance.now() - t0) + " ms)");
   }
@@ -2023,19 +2131,37 @@ else if (typeof define === 'function' && define['amd'])
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
     let t = 0;
     for (const f of faces) {
-      const c = meshes[f.mesh]?.color ?? DEFAULT_PART_COLOR;
-      for (let k = 0;k < f.tri.length / 9; k++, t++) {
-        const a = [at(f.tri, k * 9), at(f.tri, k * 9 + 1), at(f.tri, k * 9 + 2)];
-        const n = norm(cross(sub([at(f.tri, k * 9 + 3), at(f.tri, k * 9 + 4), at(f.tri, k * 9 + 5)], a), sub([at(f.tri, k * 9 + 6), at(f.tri, k * 9 + 7), at(f.tri, k * 9 + 8)], a)));
-        for (let vertex = 0;vertex < 3; vertex++)
-          for (const axis of AXES) {
-            const j = vertex * 3 + axis;
-            tri[t * 9 + j] = at(f.tri, k * 9 + j);
-            nrm[t * 9 + j] = n[axis];
-            col[t * 9 + j] = c[axis];
-            lo[axis] = Math.min(lo[axis], at(f.tri, k * 9 + j));
-            hi[axis] = Math.max(hi[axis], at(f.tri, k * 9 + j));
-          }
+      const c = meshes[f.mesh]?.color ?? DEFAULT_PART_COLOR, T = f.tri;
+      for (let k = 0;k < T.length; k += 9, t++) {
+        const ax = at(T, k), ay = at(T, k + 1), az = at(T, k + 2);
+        const ux = at(T, k + 3) - ax, uy = at(T, k + 4) - ay, uz = at(T, k + 5) - az;
+        const vx = at(T, k + 6) - ax, vy = at(T, k + 7) - ay, vz = at(T, k + 8) - az;
+        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        const scaleN = 1 / (Math.sqrt(nx * nx + ny * ny + nz * nz) || 1);
+        for (let j = 0;j < 9; j += 3) {
+          const o = t * 9 + j, x = at(T, k + j), y = at(T, k + j + 1), z = at(T, k + j + 2);
+          tri[o] = x;
+          tri[o + 1] = y;
+          tri[o + 2] = z;
+          nrm[o] = nx * scaleN;
+          nrm[o + 1] = ny * scaleN;
+          nrm[o + 2] = nz * scaleN;
+          col[o] = c[0];
+          col[o + 1] = c[1];
+          col[o + 2] = c[2];
+          if (x < lo[0])
+            lo[0] = x;
+          if (y < lo[1])
+            lo[1] = y;
+          if (z < lo[2])
+            lo[2] = z;
+          if (x > hi[0])
+            hi[0] = x;
+          if (y > hi[1])
+            hi[1] = y;
+          if (z > hi[2])
+            hi[2] = z;
+        }
         fid[t * 3] = fid[t * 3 + 1] = fid[t * 3 + 2] = f.id;
         triFace[t] = f.id;
       }
@@ -2074,26 +2200,11 @@ else if (typeof define === 'function' && define['amd'])
     r.faces = makeBuf(gl, { p: tri, n: nrm, c: col, f: fid }, tri.length / 3);
     const seg = [];
     for (const f of faces) {
-      const count = new Map;
-      const key = (i) => [at(f.tri, i * 3), at(f.tri, i * 3 + 1), at(f.tri, i * 3 + 2)].map((x) => x.toFixed(6)).join(",");
-      for (let t = 0;t < f.tri.length / 9; t++) {
-        for (let k = 0;k < 3; k++) {
-          const a = t * 3 + k, b = t * 3 + (k + 1) % 3, ka = key(a), kb = key(b);
-          if (ka === kb)
-            continue;
-          const ek = ka < kb ? ka + "|" + kb : kb + "|" + ka;
-          const e = count.get(ek);
-          if (e)
-            e.n++;
-          else
-            count.set(ek, { n: 1, a, b });
-        }
+      const { first, segs } = boundary(f.tri);
+      for (const id of segs) {
+        const i = at(first, id) * 3;
+        seg.push(at(f.tri, i), at(f.tri, i + 1), at(f.tri, i + 2));
       }
-      for (const e of count.values())
-        if (e.n === 1) {
-          for (const i of [e.a, e.b])
-            seg.push(at(f.tri, i * 3), at(f.tri, i * 3 + 1), at(f.tri, i * 3 + 2));
-        }
     }
     r.edges = makeBuf(gl, { p: new Float32Array(seg) }, seg.length / 3);
   }
@@ -2103,7 +2214,8 @@ else if (typeof define === 'function' && define['amd'])
     r.cam.target.x = model.center[0];
     r.cam.target.y = model.center[1];
     r.cam.target.z = model.center[2];
-    r.cam.dist = model.radius / Math.sin(r.cam.fov / 2) * 1.1;
+    const aspect = Math.min(1, canvas.clientWidth / Math.max(1, canvas.clientHeight));
+    r.cam.dist = model.radius / Math.sin(Math.atan(Math.tan(r.cam.fov / 2) * aspect)) * 1.1;
     draw(r);
   }
   var drawQueued = false;
@@ -2120,11 +2232,13 @@ else if (typeof define === 'function' && define['amd'])
   var drag = null;
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   canvas.addEventListener("pointerdown", (e) => {
-    drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, pan: e.button === 2 || e.shiftKey };
+    if (drag)
+      return;
+    drag = { x: e.clientX, y: e.clientY, id: e.pointerId, x0: e.clientX, y0: e.clientY, pan: e.button === 2 || e.shiftKey };
     canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener("pointermove", (e) => {
-    if (!drag || !model)
+    if (!drag || drag.id !== e.pointerId || !model)
       return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     drag.x = e.clientX;
@@ -2135,10 +2249,16 @@ else if (typeof define === 'function' && define['amd'])
       orbit(r.cam, dx, dy);
     requestDraw();
   });
+  canvas.addEventListener("pointercancel", (e) => {
+    if (drag?.id === e.pointerId)
+      drag = null;
+  });
   canvas.addEventListener("pointerup", (e) => {
     const d = drag;
+    if (!d || d.id !== e.pointerId)
+      return;
     drag = null;
-    if (d && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 4 && e.button === 0 && !e.shiftKey)
+    if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 4 && e.button === 0 && !e.shiftKey)
       pickAt(e);
   });
   canvas.addEventListener("wheel", (e) => {
@@ -2247,8 +2367,7 @@ else if (typeof define === 'function' && define['amd'])
     }
     if (f.type === "circle") {
       const d = p.feature.kind === "axis" ? p.feature.dir : f.dir;
-      const t = Math.abs(d[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-      const u = norm(cross(d, t)), v = cross(d, u);
+      const [u, v] = basis(d);
       for (let k = 0;k < 64; k++) {
         const a0 = k / 64 * 2 * Math.PI, a1 = (k + 1) / 64 * 2 * Math.PI;
         seg.push(...add(f.point, add(scale(u, f.radius * Math.cos(a0)), scale(v, f.radius * Math.sin(a0)))));
@@ -2296,6 +2415,7 @@ else if (typeof define === 'function' && define['amd'])
   var fileInput = el("file", HTMLInputElement);
   fileInput.addEventListener("change", () => {
     const file = fileInput.files?.[0];
+    fileInput.value = "";
     if (file)
       openFile(file).catch((x) => setStatus(String(x)));
   });

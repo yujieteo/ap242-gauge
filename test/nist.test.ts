@@ -1,4 +1,6 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { faceNear, load, MODEL_INCH, MODEL_MM } from './models.ts';
 import { faceEdge, featureFrom, fitFace, measure } from './subject.ts';
 import type { Face, Feature, Measurement, Vec3 } from '../src/geom.ts';
@@ -75,3 +77,25 @@ test('edge pick: a chain that is no circle is never reported as a circle', async
     if (e && e.type === 'circle') expect(e.radius).toBeLessThan(1);
   }
 });
+
+const RADIUS_TOL = 5e-3;
+
+function cylinderRadiiInFile(file: string): number[] {
+  const text = readFileSync(join(import.meta.dir, 'data', file), 'latin1').replace(/\s+/g, '');
+  return [...text.matchAll(/CYLINDRICAL_SURFACE\('[^']*',#\d+,([^)]+)\)/g)].map((m) => Number(m[1]));
+}
+
+for (const [file, cylinders] of [[MODEL_MM, 57], [MODEL_INCH, 67]] as const) {
+  test('every cylinder face of ' + file + ' has a radius that the file defines', async () => {
+    const radii = cylinderRadiiInFile(file);
+    const { faces } = await load(file);
+    let found = 0;
+    for (const face of faces) {
+      const fit = fitFace(face);
+      if (fit.type !== 'cylinder') continue;
+      found++;
+      expect(Math.min(...radii.map((r) => Math.abs(r - fit.radius)))).toBeLessThan(RADIUS_TOL);
+    }
+    expect(found).toBe(cylinders);
+  });
+}

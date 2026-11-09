@@ -7,7 +7,7 @@ type Mat3 = [Row, Row, Row];
 type Pt4 = readonly [number, number, number, number];
 type Pt2 = readonly [number, number];
 
-export const AXES: readonly Idx[] = [0, 1, 2];
+const AXES: readonly Idx[] = [0, 1, 2];
 const NEXT_AXIS: Readonly<Record<Idx, Idx>> = { 0: 1, 1: 2, 2: 0 };
 const JACOBI_PAIRS: readonly (readonly [Idx, Idx])[] = [[0, 1], [0, 2], [1, 2]];
 
@@ -55,29 +55,43 @@ function unitFromSiPrefix(prefix: string): LengthUnit | null {
   return null;
 }
 
+function unitOfRecord(body: string): LengthUnit | null {
+  if (!/LENGTH_UNIT\s*\(\s*\)/.test(body)) return null;
+  const conv = /CONVERSION_BASED_UNIT\s*\(\s*'([^']*)'/i.exec(body);
+  if (conv) return unitFromConversionName(must(conv[1]));
+  const si = /SI_UNIT\s*\(\s*([^,]*),\s*\.METRE\.\s*\)/i.exec(body);
+  return si ? unitFromSiPrefix(must(si[1])) : null;
+}
+
+function recordsWith(text: string, word: string): string[] {
+  const out: string[] = [];
+  for (let i = text.indexOf(word); i >= 0;) {
+    const end = text.indexOf(';', i);
+    const stop = end < 0 ? text.length : end;
+    out.push(text.slice(text.lastIndexOf(';', i) + 1, stop));
+    i = text.indexOf(word, stop);
+  }
+  return out;
+}
+
 export function parseStepLengthUnit(text: string): LengthUnit {
-  const flat = text.replace(/\s+/g, ' ');
-  const records = flat.split(';');
-  const byId = new Map<string, string>();
-  for (const r of records) {
-    const m = /^\s*#(\d+)\s*=\s*(.*)$/.exec(r);
-    if (m) byId.set(must(m[1]), must(m[2]));
+  const byId = new Map<string, LengthUnit>();
+  let firstUnit: LengthUnit | null = null;
+  for (const record of recordsWith(text, 'LENGTH_UNIT')) {
+    const m = /^\s*#(\d+)\s*=([\s\S]*)$/.exec(record);
+    const unit = m ? unitOfRecord(must(m[2])) : null;
+    if (!m || !unit) continue;
+    byId.set(must(m[1]), unit);
+    firstUnit = firstUnit ?? unit;
   }
-  for (const body of byId.values()) {
-    if (!/LENGTH_UNIT\s*\(\s*\)/i.test(body)) continue;
-    const conv = /CONVERSION_BASED_UNIT\s*\(\s*'([^']*)'/i.exec(body);
-    if (conv) {
-      const unit = unitFromConversionName(must(conv[1]));
-      if (unit) return unit;
-      continue;
-    }
-    const si = /SI_UNIT\s*\(\s*([^,]*),\s*\.METRE\.\s*\)/i.exec(body);
-    if (si) {
-      const unit = unitFromSiPrefix(must(si[1]));
+  for (const record of recordsWith(text, 'GLOBAL_UNIT_ASSIGNED_CONTEXT')) {
+    const refs = /GLOBAL_UNIT_ASSIGNED_CONTEXT\s*\(\s*\(([^)]*)\)/.exec(record);
+    for (const ref of refs ? must(refs[1]).split(',') : []) {
+      const unit = byId.get(ref.trim().slice(1));
       if (unit) return unit;
     }
   }
-  return DEFAULT_UNIT;
+  return firstUnit ?? DEFAULT_UNIT;
 }
 
 export type BrepGroup = { readonly first: number; readonly last: number };
@@ -96,6 +110,7 @@ export function extractFaces(meshes: readonly MeshGeometry[]): Face[] {
     const groups = mesh.brepFaces.length ? mesh.brepFaces : [{ first: 0, last: idx.length / 3 - 1 }];
     for (const g of groups) {
       const n = g.last - g.first + 1;
+      if (!(n > 0)) continue;
       const tri = new Float64Array(n * 9);
       for (let t = 0; t < n; t++) {
         for (let k = 0; k < 3; k++) {
@@ -224,6 +239,10 @@ export type EdgeFit = LineFit | CircleFit | PolylineFit;
 type VertexFit = { readonly type: 'vertex'; readonly point: Vec3; readonly rms: null };
 export type Fit = FaceFit | EdgeFit | VertexFit;
 
+type AxisTry = { readonly axis: Vec3; readonly u: Vec3; readonly v: Vec3; readonly circ: Circle2; readonly rms: number };
+const CYLINDER_REFINE_GATE = 1e-2;
+const CYLINDER_REFINE_STEP = 0.02;
+
 const emptyBounds = (): { lo: Row; hi: Row } => ({ lo: [Infinity, Infinity, Infinity], hi: [-Infinity, -Infinity, -Infinity] });
 
 export function fitFace(face: Face): FaceFit {
@@ -261,86 +280,95 @@ export function fitFace(face: Face): FaceFit {
     return { type: 'plane', point: c, normal: s < 0 ? scale(pn, -1) : pn, rms: planeRms, size };
   }
 
-  const axis = eigSym3(N).vectors[0];
-  const [u, v] = basis(axis);
-  const p2: Pt2[] = pts.map((p) => [dot(p, u), dot(p, v)]);
-  const circ = fitCircle2(p2);
-  if (circ) {
+  const across = (axis: Vec3): AxisTry | null => {
+    const [u, v] = basis(axis);
+    const circ = fitCircle2(pts.map((p) => [dot(p, u), dot(p, v)]));
+    if (!circ) return null;
     let ss = 0;
-    for (let i = 0; i < pts.length; i++) {
-      const q = must(p2[i]);
-      const d = Math.hypot(q[0] - circ.cx, q[1] - circ.cy) - circ.r;
-      ss += must(pts[i])[3] * d * d;
+    for (const p of pts) {
+      const d = Math.hypot(dot(p, u) - circ.cx, dot(p, v) - circ.cy) - circ.r;
+      ss += p[3] * d * d;
     }
-    const cylRms = Math.sqrt(ss / W);
-    if (cylRms <= tol) {
-      const onAxis = add(add(scale(u, circ.cx), scale(v, circ.cy)), scale(axis, dot(c, axis)));
-      return { type: 'cylinder', point: onAxis, dir: axis, radius: circ.r, rms: cylRms, size };
+    return { axis, u, v, circ, rms: Math.sqrt(ss / W) };
+  };
+  let best = across(eigSym3(N).vectors[0]);
+  if (best && best.rms <= CYLINDER_REFINE_GATE * size) {
+    for (let step = CYLINDER_REFINE_STEP, tries = 0; step > 1e-13 && best.rms > 1e-13 * size && tries < 400; tries++) {
+      const from: AxisTry = best;
+      for (const side of [from.u, scale(from.u, -1), from.v, scale(from.v, -1)]) {
+        const next = across(norm(add(from.axis, scale(side, step))));
+        if (next && next.rms < best.rms) best = next;
+      }
+      if (best === from) step /= 2;
     }
+  }
+  if (best && best.rms <= tol) {
+    const onAxis = add(add(scale(best.u, best.circ.cx), scale(best.v, best.circ.cy)), scale(best.axis, dot(c, best.axis)));
+    return { type: 'cylinder', point: onAxis, dir: best.axis, radius: best.circ.r, rms: best.rms, size };
   }
   return { type: 'surface', point: c, rms: null, size };
 }
 
 const EDGE_CHAIN_TURN_DEG = 40;
 const EDGE_STRAIGHT_TURN_DEG = 0.5;
+const ARC_MIN_POINTS = 4;
+const ARC_FREE_POINTS = 5;
+const UNIFORM_CHORD = 1e-3;
+const FACET_TURN_RATIO = 0.7;
+const FACET_LENGTH_RATIO = 2;
 
-export function faceEdge(face: Face, hit: Vec3): EdgeFit | null {
-  const e = faceEdgeChain(face, hit, EDGE_CHAIN_TURN_DEG);
-  if (!e || e.type !== 'polyline') return e;
-  const straight = faceEdgeChain(face, hit, EDGE_STRAIGHT_TURN_DEG);
-  return straight && straight.type === 'line' ? straight : e;
-}
+export type Boundary = { readonly first: readonly number[]; readonly segs: readonly number[] };
 
-type BoundaryEdge = { readonly a: number; readonly b: number; n: number };
-
-function faceEdgeChain(face: Face, hit: Vec3, maxTurnDeg: number): EdgeFit | null {
-  const tri = face.tri, nt = tri.length / 9;
-  const keyOf = (p: Vec3): string => [p[0], p[1], p[2]].map((x) => Math.round(x * 1e6)).join(',');
-  const vid = new Map<string, number>();
-  const verts: Vec3[] = [];
-  const id = (p: Vec3): number => {
-    const k = keyOf(p);
-    const known = vid.get(k);
-    if (known !== undefined) return known;
-    vid.set(k, verts.length);
-    verts.push(p);
-    return verts.length - 1;
-  };
-  const count = new Map<string, BoundaryEdge>();
-  for (let t = 0; t < nt; t++) {
-    const ids: Vec3 = [id(vertexAt(tri, t * 3)), id(vertexAt(tri, t * 3 + 1)), id(vertexAt(tri, t * 3 + 2))];
+export function boundary(tri: Float64Array): Boundary {
+  const nv = tri.length / 3;
+  const ids = new Map<string, number>();
+  const first: number[] = [];
+  const vid = new Int32Array(nv);
+  for (let i = 0; i < nv; i++) {
+    const key = Math.round(at(tri, i * 3) * 1e6) + ',' + Math.round(at(tri, i * 3 + 1) * 1e6) + ',' + Math.round(at(tri, i * 3 + 2) * 1e6);
+    let id = ids.get(key);
+    if (id === undefined) {
+      id = first.length;
+      ids.set(key, id);
+      first.push(i);
+    }
+    vid[i] = id;
+  }
+  const n = first.length;
+  const count = new Map<number, number>();
+  for (let i = 0; i < nv; i += 3) {
     for (const k of AXES) {
-      const a = ids[k], b = ids[NEXT_AXIS[k]];
+      const a = at(vid, i + k), b = at(vid, i + NEXT_AXIS[k]);
       if (a === b) continue;
-      const lo = Math.min(a, b), hi = Math.max(a, b);
-      const ek = lo + '_' + hi;
-      const known = count.get(ek);
-      if (known) known.n++;
-      else count.set(ek, { a: lo, b: hi, n: 1 });
+      const key = a < b ? a * n + b : b * n + a;
+      count.set(key, (count.get(key) ?? 0) + 1);
     }
   }
-  const adj = new Map<number, number[]>();
-  const link = (a: number, b: number): void => {
-    const list = adj.get(a);
-    if (list) list.push(b);
-    else adj.set(a, [b]);
-  };
-  let best: [number, number] | null = null, bestD = Infinity;
-  for (const edge of count.values()) {
-    if (edge.n !== 1) continue;
-    const { a, b } = edge;
-    link(a, b); link(b, a);
+  const segs: number[] = [];
+  for (const [key, uses] of count) if (uses === 1) segs.push(Math.floor(key / n), key % n);
+  return { first, segs };
+}
+
+export function faceEdge(face: Face, hit: Vec3): EdgeFit | null {
+  const { first, segs } = boundary(face.tri);
+  const verts = first.map((i) => vertexAt(face.tri, i));
+  const adj: number[][] = verts.map(() => []);
+  let seed: [number, number] | null = null, bestD = Infinity;
+  for (let i = 0; i < segs.length; i += 2) {
+    const a = must(segs[i]), b = must(segs[i + 1]);
+    must(adj[a]).push(b); must(adj[b]).push(a);
     const d = distPointSegment(hit, must(verts[a]), must(verts[b]));
-    if (d < bestD) { bestD = d; best = [a, b]; }
+    if (d < bestD) { bestD = d; seed = [a, b]; }
   }
-  if (!best) return null;
-  const cosMax = Math.cos(maxTurnDeg / DEG);
-  const walk = (from: number, to: number, seen: Set<number>): number[] => {
+  if (!seed) return null;
+  const cosMax = Math.cos(EDGE_CHAIN_TURN_DEG / DEG);
+  const seen = new Set<number>(seed);
+  const walk = (from: number, to: number): number[] => {
     const out: number[] = [];
     let prev = from, cur = to;
     for (;;) {
       const dirIn = norm(sub(must(verts[cur]), must(verts[prev])));
-      const next = (adj.get(cur) ?? []).filter((n) => n !== prev && !seen.has(n));
+      const next = must(adj[cur]).filter((n) => n !== prev && !seen.has(n));
       const only = next[0];
       if (next.length !== 1 || only === undefined) break;
       const dirOut = norm(sub(must(verts[only]), must(verts[cur])));
@@ -350,13 +378,13 @@ function faceEdgeChain(face: Face, hit: Vec3, maxTurnDeg: number): EdgeFit | nul
     }
     return out;
   };
-  const seen = new Set<number>(best);
-  const fwd = walk(best[0], best[1], seen);
-  const back = walk(best[1], best[0], seen);
-  const chain = [...back.reverse(), best[0], best[1], ...fwd].map((i) => must(verts[i]));
-  const first = must(chain[0]), last = must(chain[chain.length - 1]);
-  const closed = chain.length > 3 && (adj.get(must(vid.get(keyOf(first)))) ?? []).includes(must(vid.get(keyOf(last))));
-  return fitEdgeChain(chain, closed);
+  const fwd = walk(seed[0], seed[1]);
+  const back = walk(seed[1], seed[0]).reverse();
+  const ids = [...back, seed[0], seed[1], ...fwd];
+  const closed = ids.length > 3 && must(adj[must(ids[0])]).includes(must(ids[ids.length - 1]));
+  const chain = ids.map((i) => must(verts[i]));
+  const whole = fitEdgeChain(chain, closed);
+  return whole.type === 'polyline' ? fitEdgeRun(chain, closed, back.length) ?? whole : whole;
 }
 
 function distPointSegment(p: Vec3, a: Vec3, b: Vec3): number {
@@ -364,37 +392,107 @@ function distPointSegment(p: Vec3, a: Vec3, b: Vec3): number {
   return len(sub(p, add(a, scale(ab, t))));
 }
 
-function fitEdgeChain(chain: readonly Vec3[], closed: boolean): EdgeFit {
-  const a = must(chain[0]), b = must(chain[chain.length - 1]);
-  const L = len(sub(b, a));
+function chainTol(chain: readonly Vec3[]): number {
   const { lo, hi } = emptyBounds();
   for (const p of chain) for (const k of AXES) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); }
-  const size = len(sub(hi, lo));
-  const tol = Math.max(1e-4 * size, 1e-7);
-  if (!closed && L > 0) {
-    const d = scale(sub(b, a), 1 / L);
-    let worst = 0;
-    for (const p of chain) worst = Math.max(worst, len(cross(sub(p, a), d)));
-    if (worst <= tol) return { type: 'line', point: scale(add(a, b), 0.5), dir: d, length: L, ends: [a, b], rms: worst };
+  return Math.max(1e-4 * len(sub(hi, lo)), 1e-7);
+}
+
+function fitLine(chain: readonly Vec3[]): LineFit | null {
+  const a = must(chain[0]), b = must(chain[chain.length - 1]);
+  const L = len(sub(b, a));
+  if (!(L > 0)) return null;
+  const d = scale(sub(b, a), 1 / L);
+  let worst = 0;
+  for (const p of chain) worst = Math.max(worst, len(cross(sub(p, a), d)));
+  return worst <= chainTol(chain) ? { type: 'line', point: scale(add(a, b), 0.5), dir: d, length: L, ends: [a, b], rms: worst } : null;
+}
+
+function fitCircle(chain: readonly Vec3[]): CircleFit | null {
+  if (chain.length < 3) return null;
+  const pts: Pt4[] = chain.map((p) => [p[0], p[1], p[2], 1]);
+  const { c, C } = moments(pts);
+  const n = eigSym3(C).vectors[0];
+  const [u, v] = basis(n);
+  const p2: Pt2[] = chain.map((p) => [dot(p, u), dot(p, v)]);
+  const circ = fitCircle2(p2);
+  if (!circ) return null;
+  let ss = 0;
+  for (const p of p2) { const d = Math.hypot(p[0] - circ.cx, p[1] - circ.cy) - circ.r; ss += d * d; }
+  const rms = Math.sqrt(ss / p2.length);
+  if (rms > Math.max(1e-4 * chordRange(chain)[0], 1e-7)) return null;
+  const center = add(add(scale(u, circ.cx), scale(v, circ.cy)), scale(n, dot(c, n)));
+  return { type: 'circle', point: center, dir: n, radius: circ.r, rms, ends: [must(chain[0]), must(chain[chain.length - 1])] };
+}
+
+function chordRange(chain: readonly Vec3[]): readonly [number, number] {
+  let lo = Infinity, hi = 0;
+  for (let i = 1; i < chain.length; i++) {
+    const l = len(sub(must(chain[i]), must(chain[i - 1])));
+    lo = Math.min(lo, l); hi = Math.max(hi, l);
   }
-  if (chain.length >= 3) {
-    const pts: Pt4[] = chain.map((p) => [p[0], p[1], p[2], 1]);
-    const { c, C } = moments(pts);
-    const n = eigSym3(C).vectors[0];
-    const [u, v] = basis(n);
-    const p2: Pt2[] = chain.map((p) => [dot(p, u), dot(p, v)]);
-    const circ = fitCircle2(p2);
-    if (circ) {
-      let ss = 0;
-      for (const p of p2) { const d = Math.hypot(p[0] - circ.cx, p[1] - circ.cy) - circ.r; ss += d * d; }
-      const rms = Math.sqrt(ss / p2.length);
-      if (rms <= tol) {
-        const center = add(add(scale(u, circ.cx), scale(v, circ.cy)), scale(n, dot(c, n)));
-        return { type: 'circle', point: center, dir: n, radius: circ.r, rms, ends: [a, b] };
+  return [lo, hi];
+}
+
+function uniformChords(chain: readonly Vec3[]): boolean {
+  const [lo, hi] = chordRange(chain);
+  return hi - lo <= UNIFORM_CHORD * hi;
+}
+
+const looksLikeArc = (chain: readonly Vec3[], minPoints: number): boolean =>
+  chain.length >= ARC_FREE_POINTS || (chain.length >= minPoints && uniformChords(chain));
+
+function fitEdgeChain(chain: readonly Vec3[], closed: boolean): EdgeFit {
+  const line = closed ? null : fitLine(chain);
+  if (line) return line;
+  const circle = looksLikeArc(chain, 3) ? fitCircle(chain) : null;
+  if (circle) return circle;
+  return { type: 'polyline', point: must(chain[Math.floor(chain.length / 2)]), ends: [must(chain[0]), must(chain[chain.length - 1])], rms: null };
+}
+
+function fitEdgeRun(chain: readonly Vec3[], closed: boolean, s: number): EdgeFit | null {
+  const n = chain.length;
+  const P = (i: number): Vec3 => must(chain[((i % n) + n) % n]);
+  const run = (a: number, b: number): Vec3[] => {
+    const out: Vec3[] = [];
+    for (let i = a; i <= b; i++) out.push(P(i));
+    return out;
+  };
+  const turn = (i: number): number | null => {
+    if (!closed && (i <= 0 || i >= n - 1)) return null;
+    const d = dot(norm(sub(P(i), P(i - 1))), norm(sub(P(i + 1), P(i))));
+    const t = Math.acos(Math.max(-1, Math.min(1, d))) * DEG;
+    return t > EDGE_CHAIN_TURN_DEG ? null : t;
+  };
+  const grow = (a: number, b: number, leftFirst: boolean, ok: (a: number, b: number, added: number) => boolean): [number, number] => {
+    for (const left of [leftFirst, !leftFirst]) {
+      for (;;) {
+        if (b - a >= n - 1 || turn(left ? a : b) === null) break;
+        if (!ok(left ? a - 1 : a, left ? b : b + 1, left ? a : b)) break;
+        if (left) a--; else b++;
       }
     }
+    return [a, b];
+  };
+  const straight = grow(s, s + 1, true, (_a, _b, joint) => (turn(joint) ?? Infinity) <= EDGE_STRAIGHT_TURN_DEG);
+  if (straight[1] - straight[0] >= 2) {
+    const line = fitLine(run(straight[0], straight[1]));
+    if (line) return line;
   }
-  return { type: 'polyline', point: must(chain[Math.floor(chain.length / 2)]), ends: [a, b], rms: null };
+  const onCircle = (a: number, b: number): boolean => fitCircle(run(a, b)) !== null;
+  const arcL = grow(s, s + 1, true, onCircle), arcR = grow(s, s + 1, false, onCircle);
+  const arc = arcL[1] - arcL[0] >= arcR[1] - arcR[0] ? arcL : arcR;
+  const arcPoints = run(arc[0], arc[1]);
+  if (looksLikeArc(arcPoints, ARC_MIN_POINTS)) return fitCircle(arcPoints);
+  const seedLength = len(sub(P(s + 1), P(s)));
+  const facetOf = (joint: number, step: number): boolean => {
+    const t0 = turn(joint), t1 = turn(joint + step);
+    if (t0 === null || t1 === null || t0 <= FACET_TURN_RATIO * t1 || t1 <= FACET_TURN_RATIO * t0) return false;
+    const l = len(sub(P(joint + step), P(joint)));
+    return l <= FACET_LENGTH_RATIO * seedLength && seedLength <= FACET_LENGTH_RATIO * l;
+  };
+  if (facetOf(s, -1) || facetOf(s + 1, 1)) return null;
+  return fitLine(run(s, s + 1));
 }
 
 type PlaneFeature = { readonly kind: 'plane'; readonly point: Vec3; readonly normal: Vec3 };
@@ -437,7 +535,7 @@ export function measure(A: Feature, B: Feature): Measurement[] {
     const a = 90 - lineAngle(A.normal, B.dir);
     G('angle axis to plane', a);
     if (a <= PARALLEL_DEG) L('distance axis to plane', Math.abs(dot(dp, A.normal)));
-    else L('distance of B point from plane A', Math.abs(dot(dp, A.normal)));
+    else L('distance of axis point from plane', Math.abs(dot(dp, A.normal)));
   } else if (A.kind === 'plane' && B.kind === 'point') {
     L('distance point to plane', Math.abs(dot(dp, A.normal)));
   } else if (A.kind === 'axis' && B.kind === 'axis') {
