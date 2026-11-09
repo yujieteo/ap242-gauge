@@ -56,6 +56,8 @@ The test (`test/nist.test.ts`) loads two NIST AP242 test models with occt-import
 
 ## Licences
 
+The ap242-gauge source is under the [MIT License](LICENSE). That licence does not cover occt-import-js, Open CASCADE Technology or the NIST test files.
+
 `dist/ap242-gauge.html` contains [occt-import-js](https://github.com/kovacsv/occt-import-js) 0.0.23 by Viktor Kovacs, under the **GNU Lesser General Public License v2.1** (LGPL-2.1). occt-import-js contains Open CASCADE Technology, under LGPL-2.1 with the Open CASCADE exception. The HTML file holds both licence texts (button **Licences**) and a notice at the top. To use a different build of occt-import-js, replace it in `node_modules/occt-import-js` and run `bun run build`.
 
 The NIST test files are a work of the US Government.
