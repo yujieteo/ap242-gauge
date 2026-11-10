@@ -103,7 +103,14 @@ export type MeshGeometry = {
 export type Face = { readonly id: number; readonly mesh: number; readonly tri: Float64Array };
 
 export function extractFaces(meshes: readonly MeshGeometry[]): Face[] {
+  let total = 0;
+  for (const mesh of meshes) {
+    const groups = mesh.brepFaces.length ? mesh.brepFaces : [{ first: 0, last: mesh.index.length / 3 - 1 }];
+    for (const g of groups) total += Math.max(0, g.last - g.first + 1);
+  }
+  const all = new Float64Array(total * 9);
   const faces: Face[] = [];
+  let o = 0;
   meshes.forEach((mesh, mi) => {
     const pos = mesh.position;
     const idx = mesh.index;
@@ -111,16 +118,14 @@ export function extractFaces(meshes: readonly MeshGeometry[]): Face[] {
     for (const g of groups) {
       const n = g.last - g.first + 1;
       if (!(n > 0)) continue;
-      const tri = new Float64Array(n * 9);
-      for (let t = 0; t < n; t++) {
-        for (let k = 0; k < 3; k++) {
-          const v = at(idx, (g.first + t) * 3 + k);
-          tri[t * 9 + k * 3] = at(pos, v * 3);
-          tri[t * 9 + k * 3 + 1] = at(pos, v * 3 + 1);
-          tri[t * 9 + k * 3 + 2] = at(pos, v * 3 + 2);
-        }
+      const start = o;
+      for (let i = g.first * 3, end = (g.last + 1) * 3; i < end; i++, o += 3) {
+        const v = at(idx, i) * 3;
+        all[o] = at(pos, v);
+        all[o + 1] = at(pos, v + 1);
+        all[o + 2] = at(pos, v + 2);
       }
-      faces.push({ id: faces.length, mesh: mi, tri });
+      faces.push({ id: faces.length, mesh: mi, tri: all.subarray(start, o) });
     }
   });
   return faces;
@@ -194,22 +199,28 @@ export function basis(d: Vec3): readonly [Vec3, Vec3] {
 
 type Circle2 = { readonly cx: number; readonly cy: number; readonly r: number };
 
-export function fitCircle2(p2: readonly Pt2[]): Circle2 | null {
+function fitCircleXY(xs: Float64Array, ys: Float64Array, n: number): Circle2 | null {
   let mx = 0, my = 0;
-  for (const p of p2) { mx += p[0]; my += p[1]; }
-  mx /= p2.length; my /= p2.length;
-  const M = zeroRows();
-  const b: Row = [0, 0, 0];
-  for (const p of p2) {
-    const x = p[0] - mx, y = p[1] - my, z = x * x + y * y;
-    const row: Vec3 = [x, y, 1];
-    for (const i of AXES) { for (const j of AXES) M[i][j] += row[i] * row[j]; b[i] -= row[i] * z; }
+  for (let i = 0; i < n; i++) { mx += at(xs, i); my += at(ys, i); }
+  mx /= n; my /= n;
+  let m00 = 0, m01 = 0, m02 = 0, m11 = 0, m12 = 0, m22 = 0, b0 = 0, b1 = 0, b2 = 0;
+  for (let i = 0; i < n; i++) {
+    const x = at(xs, i) - mx, y = at(ys, i) - my, z = x * x + y * y;
+    m00 += x * x; m01 += x * y; m02 += x;
+    m11 += y * y; m12 += y; m22 += 1;
+    b0 -= x * z; b1 -= y * z; b2 -= z;
   }
-  const s = solve3(M, b);
+  const s = solve3([[m00, m01, m02], [m01, m11, m12], [m02, m12, m22]], [b0, b1, b2]);
   if (!s) return null;
   const cx = -s[0] / 2, cy = -s[1] / 2, r2 = cx * cx + cy * cy - s[2];
   if (!(r2 > 0)) return null;
   return { cx: cx + mx, cy: cy + my, r: Math.sqrt(r2) };
+}
+
+export function fitCircle2(p2: readonly Pt2[]): Circle2 | null {
+  const xs = new Float64Array(p2.length), ys = new Float64Array(p2.length);
+  p2.forEach((p, i) => { xs[i] = p[0]; ys[i] = p[1]; });
+  return fitCircleXY(xs, ys, p2.length);
 }
 
 const det3 = (m: Mat3): number => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
@@ -280,14 +291,16 @@ export function fitFace(face: Face): FaceFit {
     return { type: 'plane', point: c, normal: s < 0 ? scale(pn, -1) : pn, rms: planeRms, size };
   }
 
+  const xs = new Float64Array(pts.length), ys = new Float64Array(pts.length);
   const across = (axis: Vec3): AxisTry | null => {
     const [u, v] = basis(axis);
-    const circ = fitCircle2(pts.map((p) => [dot(p, u), dot(p, v)]));
+    pts.forEach((p, i) => { xs[i] = dot(p, u); ys[i] = dot(p, v); });
+    const circ = fitCircleXY(xs, ys, pts.length);
     if (!circ) return null;
     let ss = 0;
-    for (const p of pts) {
-      const d = Math.hypot(dot(p, u) - circ.cx, dot(p, v) - circ.cy) - circ.r;
-      ss += p[3] * d * d;
+    for (let i = 0; i < pts.length; i++) {
+      const d = Math.hypot(at(xs, i) - circ.cx, at(ys, i) - circ.cy) - circ.r;
+      ss += must(pts[i])[3] * d * d;
     }
     return { axis, u, v, circ, rms: Math.sqrt(ss / W) };
   };

@@ -2,16 +2,30 @@
 
 ap242-gauge opens a STEP AP242 file (for example from CATIA V5) in your browser. You pick a reference feature and a second feature. It gives the distance and the angle between them, and the diameter and radius of holes, shafts and arcs.
 
-It is one HTML file. It works offline, from a local file, with no server and no install. Your model does not leave the page. It reads the STEP file with [occt-import-js](https://github.com/kovacsv/occt-import-js) (Open CASCADE Technology as WebAssembly).
+It is one HTML file. It works offline, from a local file, with no server and no install. Your model does not leave the page. It reads the STEP file with [occt-import-js](https://github.com/kovacsv/occt-import-js) (Open CASCADE Technology as WebAssembly). The read runs in a worker, so the page stays live. It shows the elapsed time, and you can cancel it.
 
 ## Use
 
-1. Download [`ap242-gauge.html` version 1.0.1](https://github.com/yujieteo/ap242-gauge/releases/download/v1.0.1/ap242-gauge.html) (about 10 MB). Open it in a current browser (Chrome, Edge, Firefox or Safari).
+1. Download [`ap242-gauge.html` version 1.1.0](https://github.com/yujieteo/ap242-gauge/releases/download/v1.1.0/ap242-gauge.html) (about 10 MB). Open it in a current browser (Chrome, Edge, Firefox or Safari).
 2. Click **Open STEP file**, or drop a `.stp` or `.step` file on the page. The page shows all parts of the file.
-3. Select a pick mode. Click a reference feature (A), then a second feature (B). A third click starts again.
-4. Read the values in the **Measure** table.
+3. Select a pick mode. Move the pointer over the model: the feature that a click will pick lights up. Click a reference feature (A), then a second feature (B). Each later click replaces B, and A stays.
+4. Read the values in the **Measure** table. The side panel also shows the number of parts, faces and triangles, and the read time.
 
-Drag to rotate. Right-drag or shift-drag to pan. Use the wheel to zoom.
+### Controls
+
+| Action | Mouse or trackpad | Touch | Key |
+| --- | --- | --- | --- |
+| Rotate about the point under the pointer | drag | drag | |
+| Pan | right-drag, middle-drag or shift-drag | two fingers | |
+| Zoom to the pointer | wheel or pinch | pinch | |
+| Pick mode Face, Edge, Point | buttons at the top left | buttons | F, E, P |
+| View Iso, Front, Top, Right | buttons at the top right | buttons | 1, 2, 3, 4 |
+| Fit the model in the view | Fit | Fit | Z |
+| Swap A and B | Swap A and B | Swap A and B | X |
+| Remove one pick | × on its card | × on its card | |
+| Clear the picks | Clear | Clear | Esc |
+
+The views take Z as up.
 
 ### What a pick gives
 
@@ -73,7 +87,7 @@ bun test        # no browser
 bun run check   # type check, source rules, dead code, tests, dist, page budget, output replay
 ```
 
-`build.ts` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (base64) and `src/app.ts` with its imports, bundled by `bun build`. The build is deterministic, because it does not minify or compress. CI rebuilds and checks that the committed `dist/` is the same.
+`build.ts` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (base64), the Inter font (base64), and `src/app.ts` and `src/reader.worker.ts` with their imports, bundled by `bun build`. The page starts the worker from the text of `occt-import-js.js` and the worker bundle. When a browser does not allow that worker, the page reads the file on its main thread. The build is deterministic, because it does not minify or compress. CI rebuilds and checks that the committed `dist/` is the same.
 
 `test/nist.test.ts` loads two NIST AP242 test models with occt-import-js and compares fits with the drawing values and with the radii in the files. `test/properties.test.ts` checks the fits on generated shapes (planes, cylinders, slots, ellipses). See [`test/data/SOURCE.md`](test/data/SOURCE.md) for the files and their source.
 
@@ -86,5 +100,7 @@ bun run check   # type check, source rules, dead code, tests, dist, page budget,
 The ap242-gauge source is under the [MIT License](LICENSE). That licence does not cover occt-import-js, Open CASCADE Technology or the NIST test files.
 
 `dist/ap242-gauge.html` contains [occt-import-js](https://github.com/kovacsv/occt-import-js) 0.0.23 by Viktor Kovacs, under the **GNU Lesser General Public License v2.1** (LGPL-2.1). occt-import-js contains Open CASCADE Technology, under LGPL-2.1 with the Open CASCADE exception. The HTML file holds both licence texts (button **Licences**) and a notice at the top. To use a different build of occt-import-js, replace it in `node_modules/occt-import-js` and run `bun run build`.
+
+The HTML file also contains a subset of the [Inter](https://github.com/rsms/inter) typeface (`src/fonts/inter.woff2`), under the SIL Open Font License 1.1. Its licence text is in `src/fonts/inter-OFL.txt` and behind the same button.
 
 The NIST test files are a work of the US Government.

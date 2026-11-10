@@ -23,24 +23,32 @@ const script = (s: string): string => s.replace(/<\/script/gi, '<\\/script');
 const HTML_ESCAPES: Readonly<Record<string, string>> = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
 const html = (s: string): string => s.replace(/[&<>]/g, (c) => HTML_ESCAPES[c] ?? c);
 
-const bundle = await Bun.build({ entrypoints: [new URL('src/app.ts', root).pathname], root: new URL('.', root).pathname, target: 'browser', format: 'iife', minify: false });
-if (!bundle.success) throw new AggregateError(bundle.logs, 'bundling src/app.ts failed');
-const [appOutput] = bundle.outputs;
-if (!appOutput || bundle.outputs.length !== 1) throw new Error('expected one bundle output');
+async function bundle(entry: string): Promise<string> {
+  const built = await Bun.build({ entrypoints: [new URL(entry, root).pathname], root: new URL('.', root).pathname, target: 'browser', format: 'iife', minify: false });
+  if (!built.success) throw new AggregateError(built.logs, 'bundling ' + entry + ' failed');
+  const [output] = built.outputs;
+  if (!output || built.outputs.length !== 1) throw new Error('expected one bundle output for ' + entry);
+  return output.text();
+}
 
-const wasm = Buffer.from(await Bun.file(new URL(OCCT_DIR + 'dist/occt-import-js.wasm', root)).arrayBuffer()).toString('base64');
+const base64 = async (p: string): Promise<string> => Buffer.from(await Bun.file(new URL(p, root)).arrayBuffer()).toString('base64');
+
 const licences = [
   '==== occt-import-js ' + occtVersion + ' (dist/license.occt-import-js.txt) ====',
   await read(OCCT_DIR + 'dist/license.occt-import-js.txt'),
   '==== Open CASCADE Technology (dist/license.occt.txt) ====',
   await read(OCCT_DIR + 'dist/license.occt.txt'),
+  '==== Inter typeface (src/fonts/inter-OFL.txt) ====',
+  await read('src/fonts/inter-OFL.txt'),
 ].join('\n');
 
 const parts: Readonly<Record<string, string>> = {
   '@@LICENCES@@': html(licences),
   '@@OCCT_JS@@': script(await read(OCCT_DIR + 'dist/occt-import-js.js')),
-  '@@WASM_B64@@': wasm,
-  '@@APP_JS@@': script(await appOutput.text()),
+  '@@WORKER_JS@@': script(await bundle('src/reader.worker.ts')),
+  '@@WASM_B64@@': await base64(OCCT_DIR + 'dist/occt-import-js.wasm'),
+  '@@INTER_B64@@': await base64('src/fonts/inter.woff2'),
+  '@@APP_JS@@': script(await bundle('src/app.ts')),
 };
 let out = await read('src/index.html');
 for (const [mark, text] of Object.entries(parts)) {

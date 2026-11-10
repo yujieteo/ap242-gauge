@@ -1,17 +1,16 @@
-import type { Vec3 } from './geom.ts';
 import { must } from './util.ts';
 import type { Buf, Locations, Renderer } from './render.hot.ts';
 
 const VS = `attribute vec3 p; attribute vec3 n; attribute vec3 c; attribute float f;
-    uniform mat4 mvp; uniform float selA, selB; varying vec3 vn; varying vec3 vc;
-    void main(){ gl_Position = mvp*vec4(p,1.0); vn = n;
-      vc = abs(f-selA)<0.5 ? vec3(0.91,0.45,0.05) : abs(f-selB)<0.5 ? vec3(0.12,0.44,0.82) : c; gl_PointSize = 9.0; }`;
+    uniform mat4 mvp; uniform float selA, selB, hov; uniform vec3 hovCol; uniform vec2 off; varying vec3 vn; varying vec3 vc;
+    void main(){ gl_Position = mvp*vec4(p,1.0); gl_Position.xy += off*gl_Position.w; vn = n;
+      vc = abs(f-selA)<0.5 ? vec3(0.91,0.45,0.05) : abs(f-selB)<0.5 ? vec3(0.12,0.44,0.82) : abs(f-hov)<0.5 ? mix(c, hovCol, 0.45) : c;
+      gl_PointSize = 9.0; }`;
 const FS = `precision mediump float; varying vec3 vn; varying vec3 vc; uniform vec3 eyeDir; uniform float lit;
     void main(){ float d = abs(dot(normalize(vn), eyeDir));
       gl_FragColor = vec4(lit > 0.5 ? vc*(0.35+0.65*d) : vc, 1.0); }`;
 
 export const NO_SELECTION = -10;
-export const DEFAULT_PART_COLOR: Vec3 = [0.72, 0.75, 0.8];
 
 function shader(gl: WebGLRenderingContext, type: number, src: string): WebGLShader {
   const s = must(gl.createShader(type), 'WebGL shader');
@@ -32,7 +31,7 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
     c: gl.getAttribLocation(prog, 'c'), f: gl.getAttribLocation(prog, 'f'),
     mvp: gl.getUniformLocation(prog, 'mvp'), selA: gl.getUniformLocation(prog, 'selA'),
     selB: gl.getUniformLocation(prog, 'selB'), eyeDir: gl.getUniformLocation(prog, 'eyeDir'),
-    lit: gl.getUniformLocation(prog, 'lit'),
+    lit: gl.getUniformLocation(prog, 'lit'), hov: gl.getUniformLocation(prog, 'hov'), hovCol: gl.getUniformLocation(prog, 'hovCol'), off: gl.getUniformLocation(prog, 'off'),
   };
   const vec = (): { x: number; y: number; z: number } => ({ x: 0, y: 0, z: 0 });
   return {
@@ -42,8 +41,8 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
       frame: { eye: vec(), fwd: vec(), right: vec(), up: vec() },
       view: new Float64Array(16), proj: new Float64Array(16), mvp: new Float32Array(16), eyeDir: new Float32Array(3),
     },
-    edgeColor: new Float32Array([0.15, 0.17, 0.2]),
-    faces: null, edges: null, overlays: [], hasModel: false, modelRadius: 1, selA: NO_SELECTION, selB: NO_SELECTION,
+    edgeColor: new Float32Array([0.13, 0.125, 0.11]), hoverColor: new Float32Array([0.91, 0.45, 0.05]), center: vec(),
+    faces: null, edges: null, overlays: [], hasModel: false, modelRadius: 1, selA: NO_SELECTION, selB: NO_SELECTION, hover: NO_SELECTION,
   };
 }
 
