@@ -12,7 +12,10 @@ const STATES: readonly { name: string; state: Picks }[] = [
 ];
 
 const EVENTS: readonly { name: string; event: PicksEvent; after: Record<string, Picks> }[] = [
-  { name: 'pick', event: { kind: 'pick', pick: p3 }, after: { none: [p3], one: [p1, p3], two: [p3] } },
+  { name: 'pick', event: { kind: 'pick', pick: p3 }, after: { none: [p3], one: [p1, p3], two: [p1, p3] } },
+  { name: 'remove A', event: { kind: 'remove', index: 0 }, after: { none: [], one: [], two: [p2] } },
+  { name: 'remove B', event: { kind: 'remove', index: 1 }, after: { none: [], one: [p1], two: [p1] } },
+  { name: 'swap', event: { kind: 'swap' }, after: { none: [], one: [p1], two: [p2, p1] } },
   { name: 'clear', event: { kind: 'clear' }, after: { none: [], one: [], two: [] } },
   { name: 'load', event: { kind: 'load' }, after: { none: [], one: [], two: [] } },
 ];
@@ -25,8 +28,8 @@ for (const { name: stateName, state } of STATES) {
   }
 }
 
-test('picks: a third click starts again with the new pick', () => {
-  expect(nextPicks(nextPicks(nextPicks([], { kind: 'pick', pick: p1 }), { kind: 'pick', pick: p2 }), { kind: 'pick', pick: p3 })).toEqual([p3]);
+test('picks: a third click keeps reference A and replaces B', () => {
+  expect(nextPicks(nextPicks(nextPicks([], { kind: 'pick', pick: p1 }), { kind: 'pick', pick: p2 }), { kind: 'pick', pick: p3 })).toEqual([p1, p3]);
 });
 
 test('pick mode parser rejects unknown values', () => {

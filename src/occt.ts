@@ -1,7 +1,7 @@
 import type { BrepGroup, LinearUnitName, MeshGeometry } from './geom.ts';
 import type { Vec3 } from './geom.ts';
 
-export type OcctMesh = MeshGeometry & { readonly color: Vec3 | null };
+type OcctMesh = MeshGeometry & { readonly color: Vec3 | null };
 export type OcctResult =
   | { readonly success: false }
   | { readonly success: true; readonly meshes: readonly OcctMesh[] };

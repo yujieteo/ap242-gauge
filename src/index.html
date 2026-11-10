@@ -13,75 +13,159 @@
   You can replace the occt-import-js part: see build.ts in the source repository.
 -->
 <style>
-  :root { --bg: #f4f5f7; --panel: #ffffff; --ink: #1d232b; --muted: #5b6573; --line: #d7dbe0;
-          --a: #e8730c; --b: #1f6fd1; --accent: #0b7a5a; }
+  @font-face { font-family: "Inter"; src: url(data:font/woff2;base64,@@INTER_B64@@) format("woff2"); font-weight: 100 900; font-display: swap; }
+  @font-face { font-family: "Inter Fallback"; src: local("Arial"); size-adjust: 107.12%; ascent-override: 90.44%; descent-override: 22.52%; line-gap-override: 0%; }
+  :root { --bg: #fdfdfc; --line: #e9e9e7; --select: #e2e1de; --underline: #bcbbb5; --muted: #63635e; --ink: #21201c;
+    --card: #fff; --card-edge: rgba(0,0,0,.08); --shadow: 0 4px 12px rgba(0,0,0,.1);
+    --gray1: #fcfcfc; --gray2: #f8f8f8; --gray3: #f3f3f3; --gray4: #ededed; --gray7: #dbdbdb; --primary: #171717;
+    --a: #e8730c; --b: #1f6fd1; --error: #c62a2f;
+    --sans: "Inter", "Inter Fallback", Arial, sans-serif; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --text: 0.875rem; --small: 0.8125rem; --leading: 1.5; --radius: 6px; --gutter: 24px;
+    --press: 0.97; --press-duration: 150ms; --fade-duration: 150ms; --move: 200ms; --shift: 8px; --tap: 44px;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --focus-ring: 0 0 0 1px rgba(0,0,0,.06), 0 1px 0 0 rgba(0,0,0,.08), 0 2px 2px 0 rgba(0,0,0,.04), 0 3px 3px 0 rgba(0,0,0,.02),
+      0 4px 4px 0 rgba(0,0,0,.01), 0 0 0 2px rgba(0,0,0,.15); }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-               font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  #app { display: grid; grid-template-columns: 1fr 340px; height: 100%; }
-  #view { position: relative; min-width: 0; }
-  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-  #drop { position: absolute; inset: 16px; display: flex; align-items: center; justify-content: center;
-          border: 2px dashed var(--line); border-radius: 12px; color: var(--muted); text-align: center;
-          pointer-events: none; padding: 16px; }
-  #drop.hidden { display: none; }
-  #drop.over { border-color: var(--accent); color: var(--accent); }
-  aside { background: var(--panel); border-left: 1px solid var(--line); overflow: auto; padding: 14px; }
-  h1 { font-size: 16px; margin: 0 0 8px; }
-  h2 { font-size: 13px; margin: 16px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  button, .file { font: inherit; padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px;
-                  background: #fff; color: var(--ink); cursor: pointer; }
-  .file input { display: none; }
-  .mode label { padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
-  .mode input { margin: 0 4px 0 0; }
-  .feat { border-left: 4px solid var(--line); padding: 4px 8px; margin: 6px 0; background: #fafbfc; }
-  .feat.a { border-color: var(--a); } .feat.b { border-color: var(--b); }
-  .feat b { display: block; }
+  [hidden] { display: none !important; }
+  ::selection { background: var(--select); }
+  html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font: var(--text)/var(--leading) var(--sans);
+    font-feature-settings: "liga" 1, "calt" 1, "cv01", "ss03"; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  #app { display: grid; grid-template-columns: minmax(0, 1fr) 360px; height: 100%; }
+  #view { position: relative; min-width: 0; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+  canvas[data-dragging=true] { cursor: grabbing; }
+  .button { position: relative; display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 8px 12px; background: var(--gray1);
+    border: 1px solid var(--gray3); border-radius: var(--radius); color: var(--ink); font: 500 var(--small)/var(--leading) var(--sans);
+    white-space: nowrap; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    transition: transform var(--press-duration) var(--ease-out), background-color var(--fade-duration), border-color var(--fade-duration); }
+  .button::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, var(--tap)); height: max(100%, var(--tap));
+    transform: translate(-50%, -50%); }
+  .bar .button::after, .pick .button::after { width: 100%; }
+  .button:not(:disabled):active { transform: scale(var(--press)); }
+  .button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .button[data-active=true] { background: var(--gray3); border-color: var(--gray7); }
+  .button:focus-visible { outline: 2px solid transparent; box-shadow: var(--focus-ring); }
+  .button.primary { background: var(--primary); border-color: var(--primary); color: var(--gray1); font-weight: 600; }
+  .button.icon { padding: 0; width: 24px; height: 24px; justify-content: center; font-size: 1rem; line-height: 1; color: var(--muted); }
+  .open { margin-top: 16px; }
+  .key { color: var(--muted); font-weight: 400; }
+  @media (hover: hover) and (pointer: fine) {
+    .button:not(.primary, [data-active=true], :disabled):hover { background: var(--gray2); border-color: var(--gray4); }
+  }
+  .bar { position: absolute; display: flex; gap: 6px; }
+  #modes { left: var(--gutter); top: var(--gutter); }
+  #views { right: var(--gutter); top: var(--gutter); }
+  #controls { position: absolute; left: var(--gutter); bottom: var(--gutter); margin: 0; color: var(--muted); font-size: var(--small); pointer-events: none; }
+  .touch { display: none; }
+  @media (pointer: coarse) { .mouse, .key { display: none; } .touch { display: inline; } }
+  body:not([data-model=true]) :is(#modes, #views, #controls) { display: none; }
+  #drop { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    text-align: center; padding: var(--gutter); pointer-events: none; }
+  #drop .name { font-size: 1rem; }
+  #drop .muted { font-size: 1rem; line-height: 1.65; }
+  body[data-model=true] #drop { display: none; }
+  body[data-over=true] #view::after { content: ""; position: absolute; inset: 12px; border: 1px dashed var(--underline); border-radius: 12px; pointer-events: none; }
+  #toast { position: absolute; left: 50%; bottom: calc(var(--gutter) + 36px); display: flex; align-items: center; gap: 10px; max-width: calc(100% - 2 * var(--gutter));
+    padding: 12px 16px; background: var(--card); border: 1px solid var(--card-edge); border-radius: 8px; box-shadow: var(--shadow);
+    font-size: var(--small); font-weight: 500; font-variant-numeric: tabular-nums; opacity: 0; pointer-events: none;
+    transform: translate(-50%, var(--shift)); transition: opacity var(--move) var(--ease-out), transform var(--move) var(--ease-out); }
+  #toast[data-show=true] { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+  #toast[data-kind=error] { color: var(--error); }
+  #toast-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #toast .spin { display: none; flex: none; width: 14px; height: 14px; border: 2px solid var(--gray7); border-top-color: var(--ink); border-radius: 50%;
+    animation: spin 800ms linear infinite; }
+  #toast[data-kind=busy] .spin { display: block; }
+  #toast .button { padding: 2px 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  aside { display: flex; flex-direction: column; gap: 32px; border-left: 1px solid var(--line); overflow: auto; padding: var(--gutter); }
+  h1, h2 { margin: 0; font-size: inherit; font-weight: 500; }
+  h2 { margin-bottom: 8px; }
+  p { margin: 0; }
+  .muted, .hint { color: var(--muted); }
+  .name { font-weight: 500; overflow-wrap: anywhere; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  #info:not(:empty) { margin-top: 16px; }
+  #feats:not(:empty) { margin-top: 12px; display: grid; gap: 12px; }
+  .pick { padding-left: 12px; border-left: 2px solid var(--line); }
+  .pick.a { border-color: var(--a); } .pick.b { border-color: var(--b); }
+  .pick-head { display: flex; align-items: flex-start; gap: 8px; }
+  .pick-head .name { flex: 1; }
+  .slot { font-weight: 500; } .pick.a .slot { color: var(--a); } .pick.b .slot { color: var(--b); }
+  .pick .muted { font-variant-numeric: tabular-nums; }
+  #picks .row { margin-top: 12px; }
+  body:not([data-model=true]) :is(#picks, #measure) { display: none; }
+  #measure:has(#meas:empty) { display: none; }
   table { width: 100%; border-collapse: collapse; }
-  td { padding: 3px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-  td.v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
-  #status { color: var(--muted); min-height: 1.4em; }
-  .hint { color: var(--muted); font-size: 12px; }
-  #licences { white-space: pre-wrap; font-size: 11px; max-height: 240px; overflow: auto; display: none; }
-  @media (max-width: 760px) { #app { grid-template-columns: 1fr; grid-template-rows: 55vh auto; }
-                              aside { border-left: 0; border-top: 1px solid var(--line); } }
+  td { padding: 6px 0; border-top: 1px solid var(--line); vertical-align: top; color: var(--muted); }
+  tr:first-child td { border-top: 0; padding-top: 0; }
+  td.v { width: 45%; padding-left: 12px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; color: var(--ink);
+    user-select: all; -webkit-user-select: all; }
+  #about { margin-top: auto; }
+  #about .button { margin-top: 12px; }
+  #licences { margin-top: 12px; white-space: pre-wrap; font: 0.6875rem/1.5 var(--mono); color: var(--muted); max-height: 240px; overflow: auto; }
+  @media (max-width: 760px) {
+    #app { grid-template-columns: 1fr; grid-template-rows: 58vh auto; height: auto; min-height: 100%; }
+    aside { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+    .key, #controls { display: none; }
+    #views { top: auto; right: auto; left: var(--gutter); bottom: var(--gutter); }
+    #toast { bottom: calc(var(--gutter) + 52px); }
+  }
+  @media (prefers-reduced-motion: reduce) { :root { --press: 1; --shift: 0px; } }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="view">
-    <canvas id="gl"></canvas>
-    <div id="drop">Drop a .stp or .step file here, or use "Open STEP file".</div>
+    <canvas id="gl" tabindex="-1"></canvas>
+    <div id="drop"><span class="name">Drop a STEP file</span><span class="muted">or use Open STEP file. The file stays on this computer.</span></div>
+    <div id="modes" class="bar" role="group" aria-label="Pick mode">
+      <button class="button" data-mode="face" data-active="true">Face <span class="key">F</span></button>
+      <button class="button" data-mode="edge" data-active="false">Edge <span class="key">E</span></button>
+      <button class="button" data-mode="point" data-active="false">Point <span class="key">P</span></button>
+    </div>
+    <div id="views" class="bar" role="group" aria-label="View">
+      <button class="button" data-view="iso">Iso <span class="key">1</span></button>
+      <button class="button" data-view="front">Front <span class="key">2</span></button>
+      <button class="button" data-view="top">Top <span class="key">3</span></button>
+      <button class="button" data-view="right">Right <span class="key">4</span></button>
+      <button class="button" id="fit">Fit <span class="key">Z</span></button>
+    </div>
+    <p id="controls"><span class="mouse">Drag to rotate · right-drag or shift-drag to pan · scroll to zoom</span><span class="touch">Drag to rotate · two fingers to pan and zoom</span></p>
+    <div id="toast" role="status" data-show="false"><span class="spin"></span><span id="toast-text"></span><button class="button" id="cancel" hidden>Cancel</button></div>
   </div>
   <aside>
-    <h1>AP242 Gauge</h1>
-    <div class="row">
-      <label class="file">Open STEP file<input id="file" type="file" accept=".stp,.step,.STP,.STEP"></label>
-      <button id="fit">Fit view</button>
-    </div>
-    <div id="status">Loading the STEP reader...</div>
-    <h2>Pick</h2>
-    <div class="row mode">
-      <label><input type="radio" name="mode" value="face" checked>Face</label>
-      <label><input type="radio" name="mode" value="edge">Edge</label>
-      <label><input type="radio" name="mode" value="point">Point</label>
-    </div>
-    <p class="hint">First click: reference feature A. Second click: feature B. A third click starts again.
-      Face gives a plane or a cylinder axis. Edge gives a line or a circle. Point snaps to a mesh vertex.
-      Drag to rotate, right-drag or shift-drag to pan, wheel to zoom.</p>
-    <div class="row"><button id="clear">Clear</button><span id="unit" class="hint"></span></div>
-    <div id="feats"></div>
-    <h2>Measure</h2>
-    <table id="meas"></table>
-    <h2>About</h2>
-    <p class="hint">Values come from fits to the triangle mesh of each CAD face. The fit residual
-      (rms) shows how well the face matches a plane or a cylinder. No data leaves this page.</p>
-    <button id="lic">Licences</button>
-    <div id="licences">@@LICENCES@@</div>
+    <section>
+      <h1>AP242 Gauge</h1>
+      <p class="muted">Measure a STEP file from a reference feature. Offline.</p>
+      <div class="row open"><button class="button primary" id="open">Open STEP file</button><input id="file" type="file" accept=".stp,.step,.STP,.STEP" hidden></div>
+      <div id="info"></div>
+    </section>
+    <section id="picks">
+      <h2>Features</h2>
+      <p id="hint" class="hint"></p>
+      <div id="feats"></div>
+      <div class="row">
+        <button class="button" id="swap" disabled>Swap A and B <span class="key">X</span></button>
+        <button class="button" id="clear" disabled>Clear <span class="key">Esc</span></button>
+      </div>
+    </section>
+    <section id="measure">
+      <h2>Measure</h2>
+      <table id="meas"></table>
+    </section>
+    <section id="about">
+      <h2>About</h2>
+      <p class="muted">Values come from fits to the triangle mesh of each CAD face. The fit rms shows how well a face
+        matches a plane or a cylinder. No data leaves this page.</p>
+      <button class="button" id="lic">Licences</button>
+      <div id="licences" hidden>@@LICENCES@@</div>
+    </section>
   </aside>
 </div>
-<script>@@OCCT_JS@@</script>
+<script id="occt-src" type="text/plain">@@OCCT_JS@@</script>
+<script id="worker-src" type="text/plain">@@WORKER_JS@@</script>
 <script>window.OCCT_WASM_B64 = "@@WASM_B64@@";</script>
 <script>@@APP_JS@@</script>
 </body>

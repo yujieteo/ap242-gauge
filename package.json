@@ -1,6 +1,6 @@
 {
   "name": "ap242-gauge",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Open a STEP AP242 file in one offline HTML file and measure features from reference features.",
