@@ -2609,28 +2609,39 @@ else if (typeof define === 'function' && define['amd'])
       const init = { kind: "init", wasm };
       w.postMessage(init, [wasm]);
     };
+    const cancel = () => {
+      if (!job)
+        return;
+      worker.terminate();
+      job.reject(new Error(CANCELLED));
+      job = null;
+      start();
+    };
     start();
     return {
       get ready() {
         return ready;
       },
       background: true,
-      async read(name, file, stage) {
-        await ready;
+      read(name, file, stage) {
+        cancel();
         return new Promise((resolve, reject) => {
-          job = { stage, resolve, reject };
-          const message = { kind: "read", name, file };
-          worker.postMessage(message, [file]);
+          const mine = { stage, resolve, reject };
+          job = mine;
+          ready.then(() => {
+            if (job !== mine)
+              return;
+            const message = { kind: "read", name, file };
+            worker.postMessage(message, [file]);
+          }, (e) => {
+            if (job !== mine)
+              return;
+            job = null;
+            reject(e instanceof Error ? e : new Error(String(e)));
+          });
         });
       },
-      cancel() {
-        if (!job)
-          return;
-        worker.terminate();
-        job.reject(new Error(CANCELLED));
-        job = null;
-        start();
-      }
+      cancel
     };
   }
   function pageReader(src) {
@@ -2950,13 +2961,18 @@ else if (typeof define === 'function' && define['amd'])
   var info = el("info", HTMLDivElement);
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   async function openFile(file) {
-    const reader = await readerReady;
-    reader.cancel();
     const token = ++openToken;
+    const reader = await readerReady;
+    if (token !== openToken)
+      return;
+    reader.cancel();
     let stage = "Reading " + file.name;
     startBusy(() => stage, reader.background);
     try {
-      const data = await reader.read(file.name, await file.arrayBuffer(), (text) => {
+      const bytes = await file.arrayBuffer();
+      if (token !== openToken)
+        return;
+      const data = await reader.read(file.name, bytes, (text) => {
         stage = text;
       });
       if (token !== openToken)

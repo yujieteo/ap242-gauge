@@ -114,13 +114,16 @@ const info = el('info', HTMLDivElement);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 async function openFile(file: File): Promise<void> {
-  const reader = await readerReady;
-  reader.cancel();
   const token = ++openToken;
+  const reader = await readerReady;
+  if (token !== openToken) return;
+  reader.cancel();
   let stage = 'Reading ' + file.name;
   startBusy(() => stage, reader.background);
   try {
-    const data = await reader.read(file.name, await file.arrayBuffer(), (text) => { stage = text; });
+    const bytes = await file.arrayBuffer();
+    if (token !== openToken) return;
+    const data = await reader.read(file.name, bytes, (text) => { stage = text; });
     if (token !== openToken) return;
     stopBusy();
     setModel(file.name, data);
