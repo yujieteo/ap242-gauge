@@ -44,25 +44,34 @@ function workerReader(src: Sources): Reader {
     const init: ToWorker = { kind: 'init', wasm };
     w.postMessage(init, [wasm]);
   };
+  const cancel = (): void => {
+    if (!job) return;
+    worker.terminate();
+    job.reject(new Error(CANCELLED));
+    job = null;
+    start();
+  };
   start();
   return {
     get ready() { return ready; },
     background: true,
-    async read(name, file, stage) {
-      await ready;
+    read(name, file, stage) {
+      cancel();
       return new Promise<ModelData>((resolve, reject) => {
-        job = { stage, resolve, reject };
-        const message: ToWorker = { kind: 'read', name, file };
-        worker.postMessage(message, [file]);
+        const mine: Job = { stage, resolve, reject };
+        job = mine;
+        ready.then(() => {
+          if (job !== mine) return;
+          const message: ToWorker = { kind: 'read', name, file };
+          worker.postMessage(message, [file]);
+        }, (e: unknown) => {
+          if (job !== mine) return;
+          job = null;
+          reject(e instanceof Error ? e : new Error(String(e)));
+        });
       });
     },
-    cancel() {
-      if (!job) return;
-      worker.terminate();
-      job.reject(new Error(CANCELLED));
-      job = null;
-      start();
-    },
+    cancel,
   };
 }
 
