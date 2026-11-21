@@ -2505,6 +2505,63 @@ else if (typeof define === 'function' && define['amd'])
     throw new Error("unknown pick mode " + value);
   }
 
+  // src/open.ts
+  function fileOpener(readerReady, view) {
+    let active = null;
+    async function open(file) {
+      active?.stop();
+      let stopWaiting = () => {
+        return;
+      };
+      const stopped = new Promise((resolve) => {
+        stopWaiting = resolve;
+      });
+      let reader;
+      const request = {
+        stop() {
+          active = null;
+          stopWaiting();
+          reader?.cancel();
+        }
+      };
+      active = request;
+      async function load() {
+        try {
+          reader = await readerReady;
+          if (active !== request)
+            return;
+          let stage = "Reading " + file.name;
+          view.busy(() => stage);
+          const bytes = await file.arrayBuffer();
+          if (active !== request)
+            return;
+          view.parsing(reader.background);
+          const data = await reader.read(file.name, bytes, (text) => {
+            stage = text;
+          });
+          if (active === request)
+            view.success(file.name, data);
+        } catch (error) {
+          if (active === request)
+            view.failure(error);
+        } finally {
+          if (active === request)
+            active = null;
+        }
+      }
+      await Promise.race([load(), stopped]);
+    }
+    return {
+      open,
+      cancel() {
+        if (!active)
+          return;
+        active.stop();
+        view.cancelled();
+      }
+    };
+  }
+
   // src/occt.ts
   function isRecord(value) {
     return typeof value === "object" && value !== null;
@@ -2920,9 +2977,9 @@ else if (typeof define === 'function' && define['amd'])
         toastEl.dataset["show"] = "false";
       }, DONE_TOAST_MS);
   }
-  function startBusy(label, canCancel) {
+  function startBusy(label) {
     const t0 = performance.now();
-    cancelButton.hidden = !canCancel;
+    cancelButton.hidden = false;
     const tick = () => toast(label() + " · " + seconds(performance.now() - t0), "busy");
     window.clearInterval(busyTimer);
     busyTimer = window.setInterval(tick, 100);
@@ -2952,7 +3009,6 @@ else if (typeof define === 'function' && define['amd'])
   var model = null;
   var picks = [];
   var mode = "face";
-  var openToken = 0;
   var canvas = el("gl", HTMLCanvasElement);
   var r = createRenderer(canvas);
   var feats = el("feats", HTMLDivElement);
@@ -2960,36 +3016,26 @@ else if (typeof define === 'function' && define['amd'])
   var hint = el("hint", HTMLParagraphElement);
   var info = el("info", HTMLDivElement);
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  async function openFile(file) {
-    const token = ++openToken;
-    const reader = await readerReady;
-    if (token !== openToken)
-      return;
-    reader.cancel();
-    let stage = "Reading " + file.name;
-    startBusy(() => stage, reader.background);
-    try {
-      const bytes = await file.arrayBuffer();
-      if (token !== openToken)
-        return;
-      const data = await reader.read(file.name, bytes, (text) => {
-        stage = text;
-      });
-      if (token !== openToken)
-        return;
+  var opener = fileOpener(readerReady, {
+    busy: startBusy,
+    parsing(canCancel) {
+      cancelButton.hidden = !canCancel;
+    },
+    success(name, data) {
       stopBusy();
-      setModel(file.name, data);
-      toast("Opened " + file.name + " in " + seconds(data.readMs + data.prepareMs), "done");
-    } catch (x) {
-      if (token !== openToken)
-        return;
+      setModel(name, data);
+      toast("Opened " + name + " in " + seconds(data.readMs + data.prepareMs), "done");
+    },
+    failure(error) {
       stopBusy();
-      if (x instanceof Error && x.message === CANCELLED)
-        toast("Cancelled", "done");
-      else
-        toast(x instanceof Error ? x.message : String(x), "error");
+      toast(error instanceof Error ? error.message : String(error), "error");
+    },
+    cancelled() {
+      stopBusy();
+      toast("Cancelled", "done");
     }
-  }
+  });
+  var openFile = opener.open;
   function setModel(name, d) {
     const center = scale(add(d.lo, d.hi), 0.5);
     model = {
@@ -3396,11 +3442,7 @@ else if (typeof define === 'function' && define['amd'])
     picks = nextPicks(picks, { kind: "swap" });
     showPicks();
   });
-  cancelButton.addEventListener("click", () => {
-    readerReady.then((reader) => reader.cancel()).catch(() => {
-      return;
-    });
-  });
+  cancelButton.addEventListener("click", opener.cancel);
   el("lic", HTMLButtonElement).addEventListener("click", () => {
     const l = el("licences", HTMLDivElement);
     l.hidden = !l.hidden;

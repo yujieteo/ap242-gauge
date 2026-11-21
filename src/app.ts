@@ -6,7 +6,8 @@ import { facesOf } from './model.ts';
 import type { ModelData } from './model.ts';
 import { nextPicks, parsePickMode } from './picks.ts';
 import type { Pick, PickMode, Picks } from './picks.ts';
-import { CANCELLED, startReader } from './reader.ts';
+import { fileOpener } from './open.ts';
+import { startReader } from './reader.ts';
 import { camFrame, computeMatrices, draw, orbitAbout, pan, zoomAbout } from './render.hot.ts';
 import type { Overlay } from './render.hot.ts';
 import { at, must } from './util.ts';
@@ -73,9 +74,9 @@ function toast(text: string, kind: 'busy' | 'done' | 'error'): void {
   if (kind === 'done') toastTimer = window.setTimeout(() => { toastEl.dataset['show'] = 'false'; }, DONE_TOAST_MS);
 }
 
-function startBusy(label: () => string, canCancel: boolean): void {
+function startBusy(label: () => string): void {
   const t0 = performance.now();
-  cancelButton.hidden = !canCancel;
+  cancelButton.hidden = false;
   const tick = (): void => toast(label() + ' · ' + seconds(performance.now() - t0), 'busy');
   window.clearInterval(busyTimer);
   busyTimer = window.setInterval(tick, 100);
@@ -103,7 +104,6 @@ const readerReady = loadReader().then((reader) => { toast('Ready. Open a STEP fi
 let model: Model | null = null;
 let picks: Picks = [];
 let mode: PickMode = 'face';
-let openToken = 0;
 
 const canvas = el('gl', HTMLCanvasElement);
 const r = createRenderer(canvas);
@@ -113,28 +113,24 @@ const hint = el('hint', HTMLParagraphElement);
 const info = el('info', HTMLDivElement);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-async function openFile(file: File): Promise<void> {
-  const token = ++openToken;
-  const reader = await readerReady;
-  if (token !== openToken) return;
-  reader.cancel();
-  let stage = 'Reading ' + file.name;
-  startBusy(() => stage, reader.background);
-  try {
-    const bytes = await file.arrayBuffer();
-    if (token !== openToken) return;
-    const data = await reader.read(file.name, bytes, (text) => { stage = text; });
-    if (token !== openToken) return;
+const opener = fileOpener(readerReady, {
+  busy: startBusy,
+  parsing(canCancel) { cancelButton.hidden = !canCancel; },
+  success(name, data) {
     stopBusy();
-    setModel(file.name, data);
-    toast('Opened ' + file.name + ' in ' + seconds(data.readMs + data.prepareMs), 'done');
-  } catch (x) {
-    if (token !== openToken) return;
+    setModel(name, data);
+    toast('Opened ' + name + ' in ' + seconds(data.readMs + data.prepareMs), 'done');
+  },
+  failure(error) {
     stopBusy();
-    if (x instanceof Error && x.message === CANCELLED) toast('Cancelled', 'done');
-    else toast(x instanceof Error ? x.message : String(x), 'error');
-  }
-}
+    toast(error instanceof Error ? error.message : String(error), 'error');
+  },
+  cancelled() {
+    stopBusy();
+    toast('Cancelled', 'done');
+  },
+});
+const openFile = opener.open;
 
 function setModel(name: string, d: ModelData): void {
   const center = scale(add(d.lo, d.hi), 0.5);
@@ -469,7 +465,7 @@ const clearPicks = (): void => { picks = nextPicks(picks, { kind: 'clear' }); sh
 el('fit', HTMLButtonElement).addEventListener('click', () => moveCamera(undefined, true));
 el('clear', HTMLButtonElement).addEventListener('click', clearPicks);
 el('swap', HTMLButtonElement).addEventListener('click', () => { picks = nextPicks(picks, { kind: 'swap' }); showPicks(); });
-cancelButton.addEventListener('click', () => { readerReady.then((reader) => reader.cancel()).catch(() => undefined); });
+cancelButton.addEventListener('click', opener.cancel);
 el('lic', HTMLButtonElement).addEventListener('click', () => {
   const l = el('licences', HTMLDivElement);
   l.hidden = !l.hidden;
