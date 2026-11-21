@@ -1,4 +1,4 @@
-import { len, sub } from './geom.ts';
+import { add, len, sub } from './geom.ts';
 import type { Fit, LengthUnit, Measurement, Vec3 } from './geom.ts';
 import { measure } from './geom.ts';
 import type { Picks } from './picks.ts';
@@ -10,9 +10,9 @@ const fmtVec = (v: Vec3, decimals = 4): string => '(' + v.map((x) => x.toFixed(d
 const HTML_ESCAPES: Readonly<Record<string, string>> = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
 export const escapeHtml = (s: string): string => s.replace(/[&<>]/g, (c) => HTML_ESCAPES[c] ?? c);
 
-export function describe(face: number, f: Fit, unit: LengthUnit): string[] {
+export function describe(face: number, f: Fit, unit: LengthUnit, origin: Vec3): string[] {
   const rms = f.rms === null ? '' : ', fit rms ' + fmtLen(unit, f.rms);
-  const place = (v: Vec3): string => fmtVec(v, DECIMALS[unit.label]);
+  const place = (v: Vec3): string => fmtVec(add(v, origin), DECIMALS[unit.label]);
   switch (f.type) {
     case 'plane': return ['Plane (face ' + face + rms + ')', 'normal ' + fmtVec(f.normal)];
     case 'cylinder': return ['Cylinder (face ' + face + rms + ')', 'diameter ' + fmtLen(unit, 2 * f.radius) +

@@ -5,6 +5,8 @@ import occtimportjs from 'occt-import-js';
 import { facesOf, readModel, transferables } from '../src/model.ts';
 import { startOcct } from '../src/occt.ts';
 import { load, MODEL_INCH } from './models.ts';
+import type { Face } from '../src/geom.ts';
+import { must } from '../src/util.ts';
 
 test('readModel packs the faces, the render arrays and the outlines of the NIST CTC 05 model', async () => {
   const occt = await startOcct(occtimportjs, []);
@@ -16,7 +18,14 @@ test('readModel packs the faces, the render arrays and the outlines of the NIST 
   expect(d.unit.label).toBe('in');
   expect(stages).toEqual(['Reading ' + MODEL_INCH, 'Preparing ' + MODEL_INCH]);
   expect(faces.length).toBe(expected.length);
-  expect(faces.map((f) => Array.from(f.tri))).toEqual(expected.map((f) => Array.from(f.tri)));
+  const absolute = (f: Face): number[] => Array.from(f.tri, (x, i) => x + (d.origin[i % 3] ?? NaN));
+  const near = (x: number, i: number, all: number[]): boolean => Math.abs(x - (all[i] ?? NaN)) <= 1e-9 * Math.max(1, Math.abs(x));
+  faces.forEach((f, id) => {
+    const want = Array.from(must(expected[id]).tri);
+    expect(absolute(f).every((x, i) => near(x, i, want))).toBe(true);
+  });
+  expect(d.origin.every(Number.isInteger)).toBe(true);
+  expect(d.lo.every((x, k) => Math.abs(x + (d.hi[k] ?? NaN)) <= 1)).toBe(true);
   const triangles = d.faceTri.length / 9;
   expect(d.tri.length).toBe(triangles * 9);
   expect(d.triFace.length).toBe(triangles);

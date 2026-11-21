@@ -7,6 +7,8 @@ import type { ModelData } from './model.ts';
 import { nextPicks, parsePickMode } from './picks.ts';
 import type { Pick, PickMode, Picks } from './picks.ts';
 import { fileOpener } from './open.ts';
+import { raycast } from './raycast.ts';
+import type { Hit, Ray } from './raycast.ts';
 import { startReader } from './reader.ts';
 import { camFrame, computeMatrices, draw, orbitAbout, pan, zoomAbout } from './render.hot.ts';
 import type { Overlay } from './render.hot.ts';
@@ -21,10 +23,9 @@ type Model = {
   readonly triFace: Int32Array;
   readonly center: Vec3;
   readonly radius: number;
+  readonly origin: Vec3;
 };
 
-type Hit = { readonly tri: number; readonly face: number; readonly point: Vec3 };
-type Ray = { readonly o: Vec3; readonly d: Vec3 };
 type Drag = { x: number; y: number; moved: boolean; readonly x0: number; readonly y0: number; readonly pan: boolean; readonly pick: boolean; readonly pivot: Vec3 };
 type Point2 = { x: number; y: number };
 type View = { readonly yaw: number; readonly pitch: number };
@@ -135,7 +136,7 @@ const openFile = opener.open;
 function setModel(name: string, d: ModelData): void {
   const center = scale(add(d.lo, d.hi), 0.5);
   model = { name, unit: d.unit, faces: facesOf(d), fits: new Map(), tri: d.tri, triFace: d.triFace,
-    center, radius: Math.max(len(sub(d.hi, d.lo)) / 2, 1e-9) };
+    center, radius: Math.max(len(sub(d.hi, d.lo)) / 2, 1e-9), origin: d.origin };
   r.modelRadius = model.radius;
   r.center.x = center[0]; r.center.y = center[1]; r.center.z = center[2];
   r.hasModel = true;
@@ -207,32 +208,9 @@ function rayAt(clientX: number, clientY: number): Ray {
   return { o: asVec(eye), d: norm(add(asVec(fwd), add(scale(asVec(right), x * t * aspect), scale(asVec(up), y * t)))) };
 }
 
-function raycast(m: Model, ray: Ray): Hit | null {
-  const T = m.tri;
-  let best = Infinity, bestT = -1;
-  const [ox, oy, oz] = ray.o, [dx, dy, dz] = ray.d;
-  for (let t = 0, n = T.length / 9; t < n; t++) {
-    const i = t * 9;
-    const t0 = at(T, i), t1 = at(T, i + 1), t2 = at(T, i + 2);
-    const e1x = at(T, i + 3) - t0, e1y = at(T, i + 4) - t1, e1z = at(T, i + 5) - t2;
-    const e2x = at(T, i + 6) - t0, e2y = at(T, i + 7) - t1, e2z = at(T, i + 8) - t2;
-    const px = dy * e2z - dz * e2y, py = dz * e2x - dx * e2z, pz = dx * e2y - dy * e2x;
-    const det = e1x * px + e1y * py + e1z * pz;
-    if (Math.abs(det) < 1e-20) continue;
-    const inv = 1 / det, sx = ox - t0, sy = oy - t1, sz = oz - t2;
-    const u = (sx * px + sy * py + sz * pz) * inv; if (u < 0 || u > 1) continue;
-    const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
-    const v = (dx * qx + dy * qy + dz * qz) * inv; if (v < 0 || u + v > 1) continue;
-    const d = (e2x * qx + e2y * qy + e2z * qz) * inv;
-    if (d > 0 && d < best) { best = d; bestT = t; }
-  }
-  if (bestT < 0) return null;
-  return { tri: bestT, face: at(m.triFace, bestT), point: add(ray.o, scale(ray.d, best)) };
-}
-
 function pointUnder(m: Model, clientX: number, clientY: number): Vec3 {
   const ray = rayAt(clientX, clientY);
-  const hit = raycast(m, ray);
+  const hit = raycast(m.tri, m.triFace, ray);
   if (hit) return hit.point;
   const along = ray.d[0] * r.scratch.frame.fwd.x + ray.d[1] * r.scratch.frame.fwd.y + ray.d[2] * r.scratch.frame.fwd.z;
   return add(ray.o, scale(ray.d, r.cam.dist / along));
@@ -259,7 +237,7 @@ function pickFrom(m: Model, hit: Hit, pickMode: PickMode): Pick | null {
 
 function pickAt(e: { clientX: number; clientY: number }): void {
   if (!model) return;
-  const hit = raycast(model, rayAt(e.clientX, e.clientY));
+  const hit = raycast(model.tri, model.triFace, rayAt(e.clientX, e.clientY));
   if (!hit) return;
   const pick = pickFrom(model, hit, mode);
   if (!pick) { toast('This face has no boundary edge near the click.', 'done'); return; }
@@ -313,7 +291,7 @@ function clearHover(): void {
 function hoverAt(clientX: number, clientY: number): void {
   const m = model;
   if (!m) return;
-  const hit = raycast(m, rayAt(clientX, clientY));
+  const hit = raycast(m.tri, m.triFace, rayAt(clientX, clientY));
   if (!hit) { clearHover(); return; }
   r.hoverColor.set(nextColor());
   if (mode === 'face') {
@@ -342,7 +320,7 @@ function showPicks(): void {
   const cards: string[] = [];
   picks.forEach((p, i) => {
     overlays.push(...overlayFor(m, p, i === 0 ? PICK_A_COLOR : PICK_B_COLOR));
-    const lines = describe(p.face, p.fit, unit);
+    const lines = describe(p.face, p.fit, unit, m.origin);
     const slot = i === 0 ? 'A' : 'B';
     cards.push('<div class="pick ' + slot.toLowerCase() + '"><div class="pick-head"><span class="slot">' + slot + '</span><span class="name">' +
       escapeHtml(must(lines[0])) + '</span><button class="button icon" data-remove="' + i + '" aria-label="Remove ' + slot + '">×</button></div>' +
