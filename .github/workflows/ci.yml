@@ -22,17 +22,18 @@ jobs:
     runs-on: [self-hosted, desktop]
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Each job runs as a new user with no home folder. Nix and bun want one.
       - name: Make a home folder
         run: |
           mkdir -p "$RUNNER_TEMP/home"
           echo "HOME=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # bun.lock needs bun 1.4, and nixpkgs has bun 1.3.13, which cannot read it.
       # So this takes the nixpkgs bun package and gives it the official
       # bun 1.4.4 release file. The hash is the SHA-256 that the bun release
-      # publishes. A plain download of bun would not run on NixOS, but the
-      # nixpkgs package fixes the binary so that it does.
+      # publishes. A plain download of bun runs on NixOS only through nix-ld,
+      # which needs the NIX_LD setting that a job may not get. The nixpkgs
+      # package fixes the binary itself, so it runs without nix-ld.
       - name: Get bun 1.4.4
         run: |
           bun="$(nix build --no-link --print-out-paths --impure --expr '
