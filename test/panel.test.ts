@@ -23,7 +23,7 @@ async function panelText(file: string): Promise<string> {
       const pick = pickOf(face, mode);
       if (!pick) continue;
       picks.push(pick);
-      lines.push(describe(pick.face, pick.fit, unit).join(' | '));
+      lines.push(describe(pick.face, pick.fit, unit, [0, 0, 0]).join(' | '));
       for (const [label, text] of measureRows([pick], unit)) lines.push('  ' + label + ': ' + text);
     }
   }

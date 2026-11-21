@@ -17,6 +17,7 @@ export type ModelData = {
   readonly fid: Float32Array;
   readonly triFace: Int32Array;
   readonly edges: Float32Array;
+  readonly origin: Vec3;
   readonly lo: Vec3;
   readonly hi: Vec3;
   readonly readMs: number;
@@ -24,6 +25,22 @@ export type ModelData = {
 };
 
 export type ReadOutcome = { readonly ok: true; readonly data: ModelData } | { readonly ok: false; readonly message: string };
+
+function localOrigin(xyz: Float64Array): Vec3 {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let j = 0; j < xyz.length; j += 3) {
+    for (let k = 0; k < 3; k++) {
+      const x = at(xyz, j + k);
+      if (x < must(lo[k])) lo[k] = x;
+      if (x > must(hi[k])) hi[k] = x;
+    }
+  }
+  const mid = (k: number): number => {
+    const c = Math.round((must(lo[k]) + must(hi[k])) / 2);
+    return Number.isFinite(c) ? c : 0;
+  };
+  return [mid(0), mid(1), mid(2)];
+}
 
 export function readModel(reader: OcctReader, buf: Uint8Array, name: string, stage: (text: string) => void): ReadOutcome {
   const unit = parseStepLengthUnit(new TextDecoder('latin1').decode(buf));
@@ -38,6 +55,12 @@ export function readModel(reader: OcctReader, buf: Uint8Array, name: string, sta
   if (!firstFace) return { ok: false, message: name + ' has no surfaces to show' };
   const faceTri = new Float64Array(firstFace.tri.buffer);
   const nt = faceTri.length / 9;
+  const origin = localOrigin(faceTri);
+  for (let j = 0; j < faceTri.length; j += 3) {
+    faceTri[j] = at(faceTri, j) - origin[0];
+    faceTri[j + 1] = at(faceTri, j + 1) - origin[1];
+    faceTri[j + 2] = at(faceTri, j + 2) - origin[2];
+  }
   const tri = new Float32Array(faceTri), nrm = new Float32Array(nt * 9), col = new Float32Array(nt * 9);
   const fid = new Float32Array(nt * 3), triFace = new Int32Array(nt);
   const faceStart = new Uint32Array(faces.length + 1), faceMesh = new Int32Array(faces.length);
@@ -85,7 +108,7 @@ export function readModel(reader: OcctReader, buf: Uint8Array, name: string, sta
   return {
     ok: true,
     data: {
-      unit, parts: result.meshes.length, faceTri, faceStart, faceMesh, tri, nrm, col, fid, triFace, edges,
+      unit, parts: result.meshes.length, faceTri, faceStart, faceMesh, tri, nrm, col, fid, triFace, edges, origin,
       lo: [lx, ly, lz], hi: [hx, hy, hz], readMs: t1 - t0, prepareMs: performance.now() - t1,
     },
   };

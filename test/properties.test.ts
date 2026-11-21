@@ -263,7 +263,7 @@ test('measure: an axis picked first and a plane second is not labelled as plane 
 
 test('panel text: a file in metres keeps a tenth of a micrometre', () => {
   const fit = { type: 'cylinder', point: [0, 0, 0], dir: [0, 0, 1], radius: 0.003175, rms: 0, size: 0.01 } as const;
-  expect(describe(0, fit, UNITS.m)[1]).toBe('diameter 0.0063500 m, radius 0.0031750 m');
+  expect(describe(0, fit, UNITS.m, [0, 0, 0])[1]).toBe('diameter 0.0063500 m, radius 0.0031750 m');
   const pick = { face: 0, mode: 'face', fit, feature: { kind: 'axis', point: fit.point, dir: fit.dir }, hit: [0.00125, 0, 0] } as const;
   expect(measureRows([pick], UNITS.m)[0]).toEqual(['diameter', '0.0063500 m']);
 });
