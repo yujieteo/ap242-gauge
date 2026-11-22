@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { fileOpener } from '../src/open.ts';
+import { fileOpener, nextOpen } from '../src/open.ts';
+import type { OpenEvent, OpenStatus } from '../src/open.ts';
 
 function deferred<T>() {
   let resolve: (value: T) => void = () => undefined;
@@ -28,11 +29,8 @@ function harness() {
     cancel() { cancelled++; },
   };
   const opener = fileOpener(Promise.resolve(reader), {
-    busy() {},
-    parsing() {},
-    success(name, unit) { displayed.push(name + ':' + unit); },
-    failure(error) { errors.push(error); },
-    cancelled() {},
+    show(status) { if (status.kind === 'failed') errors.push(status.message); },
+    opened(name, unit) { displayed.push(name + ':' + unit); },
   });
   return { opener, dispatched, displayed, errors, get cancelled() { return cancelled; } };
 }
@@ -96,4 +94,58 @@ test('a late result for a superseded parse cannot alter the model', async () => 
   h.dispatched[0]?.result.resolve('mm');
   await turn();
   expect(h.displayed).toEqual(['new.step:inch']);
+});
+
+const waiting: OpenStatus = { kind: 'waiting', id: 1, name: 'a.step', since: 10 };
+const reading: OpenStatus = { kind: 'reading', id: 1, name: 'a.step', since: 10, stage: 'Reading a.step', canCancel: true };
+const idle: OpenStatus = { kind: 'idle' };
+const opened: OpenStatus = { kind: 'opened', name: 'a.step', ms: 5 };
+const failed: OpenStatus = { kind: 'failed', name: 'a.step', message: 'bad' };
+const cancelled: OpenStatus = { kind: 'cancelled', name: 'a.step' };
+
+const STATES: Readonly<Record<string, OpenStatus>> = { idle, waiting, reading, opened, failed, cancelled };
+const settled = { idle, opened, failed, cancelled };
+const next: OpenStatus = { kind: 'waiting', id: 2, name: 'b.step', since: 20 };
+
+const EVENTS: readonly { name: string; event: OpenEvent; after: Record<string, OpenStatus> }[] = [
+  { name: 'open', event: { kind: 'open', id: 2, name: 'b.step', at: 20 },
+    after: { idle: next, waiting: next, reading: next, opened: next, failed: next, cancelled: next } },
+  { name: 'reader', event: { kind: 'reader', id: 1 }, after: { ...settled, waiting: reading, reading } },
+  { name: 'bytes', event: { kind: 'bytes', id: 1, canCancel: false }, after: { ...settled, waiting, reading: { ...reading, canCancel: false } } },
+  { name: 'stage', event: { kind: 'stage', id: 1, text: 'Preparing a.step' }, after: { ...settled, waiting, reading: { ...reading, stage: 'Preparing a.step' } } },
+  { name: 'done', event: { kind: 'done', id: 1, at: 15 }, after: { ...settled, waiting: opened, reading: opened } },
+  { name: 'error', event: { kind: 'error', id: 1, message: 'bad' }, after: { ...settled, waiting: failed, reading: failed } },
+  { name: 'cancel', event: { kind: 'cancel' }, after: { ...settled, waiting: cancelled, reading: cancelled } },
+  { name: 'stale done', event: { kind: 'done', id: 0, at: 15 }, after: { ...settled, waiting, reading } },
+  { name: 'stale error', event: { kind: 'error', id: 0, message: 'old' }, after: { ...settled, waiting, reading } },
+];
+
+for (const [stateName, state] of Object.entries(STATES)) {
+  for (const { name: eventName, event, after } of EVENTS) {
+    test('open: ' + eventName + ' in state ' + stateName, () => {
+      expect(nextOpen(state, event)).toEqual(after[stateName] ?? idle);
+    });
+  }
+}
+
+test('open resolves with its outcome, and Cancel works while the reader starts', async () => {
+  type FakeReader = { background: boolean; read: () => Promise<string>; cancel: () => void };
+  let ready: (reader: FakeReader) => void = () => undefined;
+  const shown: string[] = [];
+  const opener = fileOpener(new Promise<FakeReader>((resolve) => { ready = resolve; }), {
+    show(status) { shown.push(status.kind); },
+    opened() {},
+  });
+  const first = opener.open(fixture('a.step').file);
+  expect(opener.status.kind).toBe('waiting');
+  opener.cancel();
+  expect(await first).toBe('cancelled');
+  const b = fixture('b.step');
+  const second = opener.open(b.file);
+  ready({ background: true, read: () => Promise.reject(new Error('b.step is bad')), cancel() {} });
+  await turn();
+  b.finish();
+  expect(await second).toBe('failed');
+  expect(opener.status).toEqual({ kind: 'failed', name: 'b.step', message: 'b.step is bad' });
+  expect(shown).toEqual(['waiting', 'cancelled', 'waiting', 'reading', 'reading', 'failed']);
 });

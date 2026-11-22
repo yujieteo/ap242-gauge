@@ -2554,58 +2554,94 @@ else if (typeof define === 'function' && define['amd'])
   }
 
   // src/open.ts
-  function fileOpener(readerReady, view) {
-    let active = null;
+  var isOpening = (s) => s.kind === "waiting" || s.kind === "reading";
+  function nextOpen(state, event) {
+    if (event.kind === "open")
+      return { kind: "waiting", id: event.id, name: event.name, since: event.at };
+    if (!isOpening(state))
+      return state;
+    if (event.kind === "cancel")
+      return { kind: "cancelled", name: state.name };
+    if (event.id !== state.id)
+      return state;
+    const { id, name, since } = state;
+    switch (event.kind) {
+      case "reader":
+        return state.kind === "waiting" ? { kind: "reading", id, name, since, stage: "Reading " + name, canCancel: true } : state;
+      case "bytes":
+        return state.kind === "reading" ? { ...state, canCancel: event.canCancel } : state;
+      case "stage":
+        return state.kind === "reading" ? { ...state, stage: event.text } : state;
+      case "done":
+        return { kind: "opened", name, ms: event.at - since };
+      case "error":
+        return { kind: "failed", name, message: event.message };
+    }
+  }
+  function fileOpener(readerReady, view, now = () => performance.now()) {
+    let status = { kind: "idle" };
+    let lastId = 0;
+    let stopActive = null;
+    const send = (event) => {
+      const next = nextOpen(status, event);
+      if (next === status)
+        return false;
+      status = next;
+      view.show(next);
+      return true;
+    };
     async function open(file) {
-      active?.stop();
-      let stopWaiting = () => {
+      stopActive?.("replaced");
+      const id = ++lastId;
+      let reader;
+      let stopped = () => {
         return;
       };
-      const stopped = new Promise((resolve) => {
-        stopWaiting = resolve;
+      const stoppedEarly = new Promise((resolve) => {
+        stopped = resolve;
       });
-      let reader;
-      const request = {
-        stop() {
-          active = null;
-          stopWaiting();
-          reader?.cancel();
-        }
+      const stop = (outcome) => {
+        stopActive = null;
+        stopped(outcome);
+        reader?.cancel();
       };
-      active = request;
+      stopActive = stop;
+      send({ kind: "open", id, name: file.name, at: now() });
       async function load() {
         try {
           reader = await readerReady;
-          if (active !== request)
-            return;
-          let stage = "Reading " + file.name;
-          view.busy(() => stage);
+          if (!send({ kind: "reader", id }))
+            return "replaced";
           const bytes = await file.arrayBuffer();
-          if (active !== request)
-            return;
-          view.parsing(reader.background);
+          if (!send({ kind: "bytes", id, canCancel: reader.background }))
+            return "replaced";
           const data = await reader.read(file.name, bytes, (text) => {
-            stage = text;
+            send({ kind: "stage", id, text });
           });
-          if (active === request)
-            view.success(file.name, data);
+          if (!isOpening(status) || status.id !== id)
+            return "replaced";
+          view.opened(file.name, data);
+          send({ kind: "done", id, at: now() });
+          return "opened";
         } catch (error) {
-          if (active === request)
-            view.failure(error);
+          return send({ kind: "error", id, message: error instanceof Error ? error.message : String(error) }) ? "failed" : "replaced";
         } finally {
-          if (active === request)
-            active = null;
+          if (stopActive === stop)
+            stopActive = null;
         }
       }
-      await Promise.race([load(), stopped]);
+      return Promise.race([load(), stoppedEarly]);
     }
     return {
       open,
       cancel() {
-        if (!active)
+        if (!stopActive)
           return;
-        active.stop();
-        view.cancelled();
+        stopActive("cancelled");
+        send({ kind: "cancel" });
+      },
+      get status() {
+        return status;
       }
     };
   }
@@ -3046,7 +3082,7 @@ else if (typeof define === 'function' && define['amd'])
   var toastText = el("toast-text", HTMLSpanElement);
   var cancelButton = el("cancel", HTMLButtonElement);
   var toastTimer = 0;
-  var busyTimer = 0;
+  var openTimer = 0;
   function toast(text, kind) {
     window.clearTimeout(toastTimer);
     toastText.textContent = text;
@@ -3057,17 +3093,23 @@ else if (typeof define === 'function' && define['amd'])
         toastEl.dataset["show"] = "false";
       }, DONE_TOAST_MS);
   }
-  function startBusy(label) {
-    const t0 = performance.now();
-    cancelButton.hidden = false;
-    const tick = () => toast(label() + " · " + seconds(performance.now() - t0), "busy");
-    window.clearInterval(busyTimer);
-    busyTimer = window.setInterval(tick, 100);
-    tick();
+  function openLabel(s) {
+    return s.kind === "waiting" ? "Waiting for the STEP reader to open " + s.name : s.kind === "reading" ? s.stage : "";
   }
-  function stopBusy() {
-    window.clearInterval(busyTimer);
-    cancelButton.hidden = true;
+  function showOpen(s) {
+    document.body.dataset["open"] = s.kind;
+    window.clearInterval(openTimer);
+    cancelButton.hidden = !(s.kind === "waiting" || s.kind === "reading" && s.canCancel);
+    if (isOpening(s)) {
+      const tick = () => toast(openLabel(s) + " · " + seconds(performance.now() - s.since), "busy");
+      openTimer = window.setInterval(tick, 100);
+      tick();
+    } else if (s.kind === "opened")
+      toast("Opened " + s.name + " in " + seconds(s.ms), "done");
+    else if (s.kind === "failed")
+      toast(s.message, "error");
+    else if (s.kind === "cancelled")
+      toast("Cancelled", "done");
   }
   function pageText(id) {
     return el(id, HTMLScriptElement).text;
@@ -3080,10 +3122,12 @@ else if (typeof define === 'function' && define['amd'])
   }
   toast("Starting the STEP reader", "busy");
   var readerReady = loadReader().then((reader) => {
-    toast("Ready. Open a STEP file.", "done");
+    if (opener.status.kind === "idle")
+      toast("Ready. Open a STEP file.", "done");
     return reader;
   }, (e) => {
-    toast("Cannot start the STEP reader: " + String(e), "error");
+    if (opener.status.kind === "idle")
+      toast("Cannot start the STEP reader: " + String(e), "error");
     throw e;
   });
   var model = null;
@@ -3096,26 +3140,9 @@ else if (typeof define === 'function' && define['amd'])
   var hint = el("hint", HTMLParagraphElement);
   var info = el("info", HTMLDivElement);
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  var opener = fileOpener(readerReady, {
-    busy: startBusy,
-    parsing(canCancel) {
-      cancelButton.hidden = !canCancel;
-    },
-    success(name, data) {
-      stopBusy();
-      setModel(name, data);
-      toast("Opened " + name + " in " + seconds(data.readMs + data.prepareMs), "done");
-    },
-    failure(error) {
-      stopBusy();
-      toast(error instanceof Error ? error.message : String(error), "error");
-    },
-    cancelled() {
-      stopBusy();
-      toast("Cancelled", "done");
-    }
-  });
+  var opener = fileOpener(readerReady, { show: showOpen, opened: setModel });
   var openFile = opener.open;
+  document.body.dataset["open"] = opener.status.kind;
   function setModel(name, d) {
     const center = scale(add(d.lo, d.hi), 0.5);
     model = {
@@ -3553,6 +3580,9 @@ else if (typeof define === 'function' && define['amd'])
       const c = [0, 1, 2, 3].map((i) => at(mvp, i) * p[0] + at(mvp, 4 + i) * p[1] + at(mvp, 8 + i) * p[2] + at(mvp, 12 + i));
       const c0 = must(c[0]), c1 = must(c[1]), c3 = must(c[3]);
       return [rect.left + (c0 / c3 + 1) / 2 * rect.width, rect.top + (1 - c1 / c3) / 2 * rect.height];
+    },
+    get openStatus() {
+      return opener.status;
     },
     get picks() {
       return picks;

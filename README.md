@@ -6,7 +6,7 @@ It is one HTML file. It works offline, from a local file, with no server and no 
 
 ## Use
 
-1. Download [`ap242-gauge.html` version 1.1.0](https://github.com/yujieteo/ap242-gauge/releases/download/v1.1.0/ap242-gauge.html) (about 10 MB). Open it in a current browser (Chrome, Edge, Firefox or Safari).
+1. Download [`ap242-gauge.html` version 1.2.0](https://github.com/yujieteo/ap242-gauge/releases/download/v1.2.0/ap242-gauge.html) (about 10 MB). Open it in a current browser (Chrome, Edge, Firefox or Safari).
 2. Click **Open STEP file**, or drop a `.stp` or `.step` file on the page. The page shows all parts of the file.
 3. Select a pick mode. Move the pointer over the model: the feature that a click will pick lights up. Click a reference feature (A), then a second feature (B). Each later click replaces B, and A stays.
 4. Read the values in the **Measure** table. The side panel also shows the number of parts, faces and triangles, and the read time.
@@ -52,6 +52,16 @@ Edge mode uses the boundary of the face that you click. It takes the edge neares
 | any two picks | distance between the two pick points, with dx, dy and dz |
 
 Lengths are in the length unit of the STEP file (mm, cm, m, inch or foot). The tool reads the unit from the `LENGTH_UNIT` of the geometric context of the file. Each unit shows a resolution of 0.3 µm or finer. Angles are in degrees.
+
+### Script the page
+
+The page gives a script or a browser agent the object `window.ap242gauge`:
+
+- `openFile(file)` opens a `File`. It resolves with `opened`, `failed`, `cancelled` or `replaced` (another file was opened before it finished).
+- `openStatus` is the state of the file open: `idle`, `waiting` (the STEP reader is still starting), `reading`, `opened`, `failed` or `cancelled`. The `body` element has the same value in its `data-open` attribute.
+- `pickAt(x, y)`, `setView(yaw, pitch)`, `project(point)`, `picks`, `model` and `measurements()` pick, move the view and read the results.
+
+`src/open.ts` holds the file-open states and their transitions in the function `nextOpen`. `src/picks.ts` holds the pick states in `nextPicks`.
 
 ## How it measures
 

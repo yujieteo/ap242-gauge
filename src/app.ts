@@ -6,7 +6,8 @@ import { facesOf } from './model.ts';
 import type { ModelData } from './model.ts';
 import { nextPicks, parsePickMode } from './picks.ts';
 import type { Pick, PickMode, Picks } from './picks.ts';
-import { fileOpener } from './open.ts';
+import { fileOpener, isOpening } from './open.ts';
+import type { OpenOutcome, OpenStatus } from './open.ts';
 import { raycast } from './raycast.ts';
 import type { Hit, Ray } from './raycast.ts';
 import { startReader } from './reader.ts';
@@ -65,7 +66,7 @@ function decodeBase64(b64: string): Uint8Array {
 const toastEl = el('toast', HTMLDivElement);
 const toastText = el('toast-text', HTMLSpanElement);
 const cancelButton = el('cancel', HTMLButtonElement);
-let toastTimer = 0, busyTimer = 0;
+let toastTimer = 0, openTimer = 0;
 
 function toast(text: string, kind: 'busy' | 'done' | 'error'): void {
   window.clearTimeout(toastTimer);
@@ -75,18 +76,21 @@ function toast(text: string, kind: 'busy' | 'done' | 'error'): void {
   if (kind === 'done') toastTimer = window.setTimeout(() => { toastEl.dataset['show'] = 'false'; }, DONE_TOAST_MS);
 }
 
-function startBusy(label: () => string): void {
-  const t0 = performance.now();
-  cancelButton.hidden = false;
-  const tick = (): void => toast(label() + ' · ' + seconds(performance.now() - t0), 'busy');
-  window.clearInterval(busyTimer);
-  busyTimer = window.setInterval(tick, 100);
-  tick();
+function openLabel(s: OpenStatus): string {
+  return s.kind === 'waiting' ? 'Waiting for the STEP reader to open ' + s.name : s.kind === 'reading' ? s.stage : '';
 }
 
-function stopBusy(): void {
-  window.clearInterval(busyTimer);
-  cancelButton.hidden = true;
+function showOpen(s: OpenStatus): void {
+  document.body.dataset['open'] = s.kind;
+  window.clearInterval(openTimer);
+  cancelButton.hidden = !(s.kind === 'waiting' || (s.kind === 'reading' && s.canCancel));
+  if (isOpening(s)) {
+    const tick = (): void => toast(openLabel(s) + ' · ' + seconds(performance.now() - s.since), 'busy');
+    openTimer = window.setInterval(tick, 100);
+    tick();
+  } else if (s.kind === 'opened') toast('Opened ' + s.name + ' in ' + seconds(s.ms), 'done');
+  else if (s.kind === 'failed') toast(s.message, 'error');
+  else if (s.kind === 'cancelled') toast('Cancelled', 'done');
 }
 
 function pageText(id: string): string {
@@ -99,8 +103,8 @@ async function loadReader(): ReturnType<typeof startReader> {
   return startReader({ occt: pageText('occt-src'), worker: pageText('worker-src'), wasm: decodeBase64(b64) });
 }
 toast('Starting the STEP reader', 'busy');
-const readerReady = loadReader().then((reader) => { toast('Ready. Open a STEP file.', 'done'); return reader; },
-  (e: unknown) => { toast('Cannot start the STEP reader: ' + String(e), 'error'); throw e; });
+const readerReady = loadReader().then((reader) => { if (opener.status.kind === 'idle') toast('Ready. Open a STEP file.', 'done'); return reader; },
+  (e: unknown) => { if (opener.status.kind === 'idle') toast('Cannot start the STEP reader: ' + String(e), 'error'); throw e; });
 
 let model: Model | null = null;
 let picks: Picks = [];
@@ -114,24 +118,9 @@ const hint = el('hint', HTMLParagraphElement);
 const info = el('info', HTMLDivElement);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-const opener = fileOpener(readerReady, {
-  busy: startBusy,
-  parsing(canCancel) { cancelButton.hidden = !canCancel; },
-  success(name, data) {
-    stopBusy();
-    setModel(name, data);
-    toast('Opened ' + name + ' in ' + seconds(data.readMs + data.prepareMs), 'done');
-  },
-  failure(error) {
-    stopBusy();
-    toast(error instanceof Error ? error.message : String(error), 'error');
-  },
-  cancelled() {
-    stopBusy();
-    toast('Cancelled', 'done');
-  },
-});
+const opener = fileOpener(readerReady, { show: showOpen, opened: setModel });
 const openFile = opener.open;
+document.body.dataset['open'] = opener.status.kind;
 
 function setModel(name: string, d: ModelData): void {
   const center = scale(add(d.lo, d.hi), 0.5);
@@ -482,7 +471,8 @@ window.addEventListener('drop', (e) => {
 draw(r);
 
 type Ap242GaugeHooks = {
-  openFile: (file: File) => Promise<void>;
+  openFile: (file: File) => Promise<OpenOutcome>;
+  readonly openStatus: OpenStatus;
   pickAt: (x: number, y: number) => void;
   setView: (yaw: number, pitch: number) => void;
   project: (p: Vec3) => [number, number];
@@ -506,6 +496,7 @@ window.ap242gauge = {
     const c0 = must(c[0]), c1 = must(c[1]), c3 = must(c[3]);
     return [rect.left + (c0 / c3 + 1) / 2 * rect.width, rect.top + (1 - c1 / c3) / 2 * rect.height];
   },
+  get openStatus() { return opener.status; },
   get picks() { return picks; },
   get model() { return model; },
   measurements: () => [...meas.querySelectorAll('tr')].map((tr) => [...tr.children].map((td) => td.textContent ?? '')),
