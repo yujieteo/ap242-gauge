@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { PAGE_BUDGET_BYTES, overBudget } from '../scripts/budget.ts';
 import { hotAllocations, htmlComments, isExcluded, tsComments } from '../scripts/rules.ts';
-import { compareOutputs } from '../scripts/replay.ts';
+import { addAccepted, compareOutputs, parseAccepted, splitAccepted } from '../scripts/replay.ts';
 
 test('comment rule: finds line, block, trailing and end-of-file comments', () => {
   expect(tsComments('// one\nconst a = 1;').length).toBe(1);
@@ -53,4 +53,23 @@ test('output replay: reports every differing output and a missing one', () => {
   expect(compareOutputs(['a', 'b'], ['a', 'b']).diffs).toEqual([]);
   expect(compareOutputs(['a', 'b'], ['a', 'c']).diffs).toEqual([{ index: 1, base: 'b', branch: 'c' }]);
   expect(compareOutputs(['a'], ['a', 'x']).diffs.length).toBe(1);
+});
+
+test('output replay: an accepted difference passes, a new one does not, and an unused entry is reported', () => {
+  const diffs = [{ index: 4, base: 'b', branch: 'c' }, { index: 9, base: 'x', branch: 'y' }];
+  const { fresh, unused } = splitAccepted(diffs, [{ base: 'b', branch: 'c' }, { base: 'p', branch: 'q' }]);
+  expect(fresh).toEqual([{ index: 9, base: 'x', branch: 'y' }]);
+  expect(unused).toEqual([{ base: 'p', branch: 'q' }]);
+  expect(splitAccepted(diffs, [{ base: 'b', branch: 'x' }]).fresh.length).toBe(2);
+});
+
+test('output replay: accepting adds each new pair once and keeps the old ones', () => {
+  expect(addAccepted([{ base: 'b', branch: 'c' }], [{ base: 'b', branch: 'c' }, { base: 'x', branch: 'y' }, { base: 'x', branch: 'y' }]))
+    .toEqual([{ base: 'b', branch: 'c' }, { base: 'x', branch: 'y' }]);
+});
+
+test('output replay: the accepted file must be a list of base and branch strings', () => {
+  expect(parseAccepted('[{"base":"b","branch":"c"}]')).toEqual([{ base: 'b', branch: 'c' }]);
+  expect(() => parseAccepted('{}')).toThrow();
+  expect(() => parseAccepted('[{"base":"b"}]')).toThrow();
 });

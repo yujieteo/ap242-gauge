@@ -1,9 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { isRecord } from '../src/util.ts';
 
 const root = join(import.meta.dir, '..');
 const SHOWN_DIFFS = 5;
+const ACCEPTED_NAME = 'scripts/replay-accepted.json';
+const ACCEPTED_FILE = join(root, ACCEPTED_NAME);
 
 function git(...args: string[]): string {
   const r = Bun.spawnSync(['git', '-C', root, ...args], { stdout: 'pipe', stderr: 'pipe' });
@@ -40,6 +43,38 @@ export function compareOutputs(base: readonly string[], branch: readonly string[
   return { total, diffs };
 }
 
+type OutputPair = { readonly base: string; readonly branch: string };
+
+export function parseAccepted(text: string): OutputPair[] {
+  const json: unknown = JSON.parse(text);
+  if (!Array.isArray(json)) throw new Error(ACCEPTED_NAME + ' is not an array');
+  return json.map((entry: unknown, i): OutputPair => {
+    if (!isRecord(entry) || typeof entry['base'] !== 'string' || typeof entry['branch'] !== 'string') {
+      throw new Error(ACCEPTED_NAME + ' entry ' + i + ' needs the strings base and branch');
+    }
+    return { base: entry['base'], branch: entry['branch'] };
+  });
+}
+
+const pairKey = (d: OutputPair): string => JSON.stringify([d.base, d.branch]);
+
+export function splitAccepted<D extends OutputPair>(diffs: readonly D[], accepted: readonly OutputPair[]): { readonly fresh: D[]; readonly unused: OutputPair[] } {
+  const known = new Set(accepted.map(pairKey));
+  const seen = new Set(diffs.map(pairKey));
+  return { fresh: diffs.filter((d) => !known.has(pairKey(d))), unused: accepted.filter((a) => !seen.has(pairKey(a))) };
+}
+
+export function addAccepted(accepted: readonly OutputPair[], fresh: readonly OutputPair[]): OutputPair[] {
+  const out = [...accepted];
+  const known = new Set(out.map(pairKey));
+  for (const d of fresh) {
+    if (known.has(pairKey(d))) continue;
+    known.add(pairKey(d));
+    out.push({ base: d.base, branch: d.branch });
+  }
+  return out;
+}
+
 const lines = (file: string): string[] => readFileSync(file, 'utf8').split('\n').filter(Boolean);
 
 function main(): void {
@@ -61,17 +96,22 @@ function main(): void {
     mustRun(['bun', 'run', runner, baseCopy, inputs, baseOut]);
     mustRun(['bun', 'run', runner, root, inputs, branchOut]);
     const result = compareOutputs(lines(baseOut), lines(branchOut));
-    console.log('replay: ' + result.total + ' outputs compared against ' + baseRef + ', ' + result.diffs.length + ' differ');
-    if (!result.diffs.length) return;
-    for (const d of result.diffs.slice(0, SHOWN_DIFFS)) {
+    const accepted = existsSync(ACCEPTED_FILE) ? parseAccepted(readFileSync(ACCEPTED_FILE, 'utf8')) : [];
+    const { fresh, unused } = splitAccepted(result.diffs, accepted);
+    console.log('replay: ' + result.total + ' outputs compared against ' + baseRef + ', ' + result.diffs.length + ' differ, ' +
+      (result.diffs.length - fresh.length) + ' of them accepted in ' + ACCEPTED_NAME);
+    if (unused.length) console.log('replay: ' + unused.length + ' entries in ' + ACCEPTED_NAME + ' matched no difference on this run; remove them when the change is on main');
+    if (!fresh.length) return;
+    for (const d of fresh.slice(0, SHOWN_DIFFS)) {
       console.log('--- input ' + d.index + '\n- ' + d.base.slice(0, 600) + '\n+ ' + d.branch.slice(0, 600));
     }
     if (!accept) {
-      console.error('replay failed: treat the commit as a refactor, or run with --accept after you read the diff');
+      console.error('replay failed: ' + fresh.length + ' differences are not accepted; treat the commit as a refactor, or run with --accept after you read the diff');
       process.exitCode = 1;
       return;
     }
-    console.log('replay: diff accepted on this run');
+    writeFileSync(ACCEPTED_FILE, JSON.stringify(addAccepted(accepted, fresh), null, 2) + '\n');
+    console.log('replay: ' + fresh.length + ' differences added to ' + ACCEPTED_NAME + '; commit that file');
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
