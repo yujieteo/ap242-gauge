@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import occtimportjs from 'occt-import-js';
 import type { Face, LengthUnit, Vec3 } from '../src/geom.ts';
-import { add, cross, dot, len, scale, sub } from '../src/geom.ts';
+import { add, cross, dot, len, scale, sub, vertexAt } from '../src/geom.ts';
 import { startOcct } from '../src/occt.ts';
 import type { OcctReader } from '../src/occt.ts';
 import { extractFaces, parseStepLengthUnit } from './subject.ts';
-import { at, must } from '../src/util.ts';
+import { must } from '../src/util.ts';
 
 export type Model = { readonly unit: LengthUnit; readonly faces: Face[] };
 
@@ -34,12 +34,8 @@ export function load(file: string): Promise<Model> {
   return loading;
 }
 
-function vertex(tri: Float64Array, t: number, k: number): Vec3 {
-  return [at(tri, t * 9 + k * 3), at(tri, t * 9 + k * 3 + 1), at(tri, t * 9 + k * 3 + 2)];
-}
-
 function distTri(p: Vec3, tri: Float64Array, t: number): number {
-  const a = vertex(tri, t, 0), b = vertex(tri, t, 1), c = vertex(tri, t, 2);
+  const a = vertexAt(tri, t * 3), b = vertexAt(tri, t * 3 + 1), c = vertexAt(tri, t * 3 + 2);
   const n = cross(sub(b, a), sub(c, a));
   const nn = dot(n, n);
   if (nn > 0) {
