@@ -330,7 +330,7 @@ const UNIFORM_CHORD = 1e-3;
 const FACET_TURN_RATIO = 0.7;
 const FACET_LENGTH_RATIO = 2;
 
-export type Boundary = { readonly first: readonly number[]; readonly segs: readonly number[] };
+type Boundary = { readonly first: readonly number[]; readonly segs: readonly number[] };
 
 export function boundary(tri: Float64Array): Boundary {
   const nv = tri.length / 3;
@@ -416,9 +416,14 @@ function fitLine(chain: readonly Vec3[]): LineFit | null {
   const L = len(sub(b, a));
   if (!(L > 0)) return null;
   const d = scale(sub(b, a), 1 / L);
-  let worst = 0;
-  for (const p of chain) worst = Math.max(worst, len(cross(sub(p, a), d)));
-  return worst <= chainTol(chain) ? { type: 'line', point: scale(add(a, b), 0.5), dir: d, length: L, ends: [a, b], rms: worst } : null;
+  let worst = 0, ss = 0;
+  for (const p of chain) {
+    const off = len(cross(sub(p, a), d));
+    worst = Math.max(worst, off);
+    ss += off * off;
+  }
+  if (worst > chainTol(chain)) return null;
+  return { type: 'line', point: scale(add(a, b), 0.5), dir: d, length: L, ends: [a, b], rms: Math.sqrt(ss / chain.length) };
 }
 
 function fitCircle(chain: readonly Vec3[]): CircleFit | null {

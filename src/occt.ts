@@ -3,7 +3,7 @@ import type { Vec3 } from './geom.ts';
 import { isRecord } from './util.ts';
 
 type OcctMesh = MeshGeometry & { readonly color: Vec3 | null };
-export type OcctResult =
+type OcctResult =
   | { readonly success: false }
   | { readonly success: true; readonly meshes: readonly OcctMesh[] };
 export type OcctReader = (content: Uint8Array, linearUnit: LinearUnitName) => OcctResult;

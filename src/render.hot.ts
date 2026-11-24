@@ -1,8 +1,8 @@
 import { at } from './util.ts';
 
 type V3 = { x: number; y: number; z: number };
-export type Cam = { target: V3; dist: number; yaw: number; pitch: number; fov: number };
-export type Frame = { eye: V3; fwd: V3; right: V3; up: V3 };
+type Cam = { target: V3; dist: number; yaw: number; pitch: number; fov: number };
+type Frame = { eye: V3; fwd: V3; right: V3; up: V3 };
 export type Buf = { count: number; p: WebGLBuffer; n?: WebGLBuffer; c?: WebGLBuffer; f?: WebGLBuffer };
 export type Overlay = { buf: Buf; color: Float32Array; mode: number };
 export type Locations = {
@@ -11,7 +11,7 @@ export type Locations = {
   eyeDir: WebGLUniformLocation | null; lit: WebGLUniformLocation | null;
   hov: WebGLUniformLocation | null; hovCol: WebGLUniformLocation | null; off: WebGLUniformLocation | null;
 };
-export type Scratch = { frame: Frame; view: Float64Array; proj: Float64Array; mvp: Float32Array; eyeDir: Float32Array };
+type Scratch = { frame: Frame; view: Float64Array; proj: Float64Array; mvp: Float32Array; eyeDir: Float32Array };
 export type Renderer = {
   gl: WebGLRenderingContext;
   canvas: HTMLCanvasElement;

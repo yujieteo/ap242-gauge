@@ -46,7 +46,7 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
   };
 }
 
-export type Arrays = { p: Float32Array; n?: Float32Array; c?: Float32Array; f?: Float32Array };
+type Arrays = { p: Float32Array; n?: Float32Array; c?: Float32Array; f?: Float32Array };
 
 function upload(gl: WebGLRenderingContext, data: Float32Array): WebGLBuffer {
   const b = must(gl.createBuffer(), 'WebGL buffer');

@@ -3,7 +3,7 @@ import type { Fit, LengthUnit, Measurement, Vec3 } from './geom.ts';
 import { measure } from './geom.ts';
 import type { Picks } from './picks.ts';
 
-const DECIMALS: Readonly<Record<LengthUnit['label'], number>> = { mm: 4, cm: 5, m: 7, in: 5, ft: 6 };
+const DECIMALS: Readonly<Record<LengthUnit['label'], number>> = { mm: 4, cm: 5, m: 7, in: 5, ft: 7 };
 const fmtLen = (unit: LengthUnit, x: number): string => x.toFixed(DECIMALS[unit.label]) + ' ' + unit.label;
 const fmtVec = (v: Vec3, decimals = 4): string => '(' + v.map((x) => x.toFixed(decimals)).join(', ') + ')';
 
@@ -41,7 +41,6 @@ export function measureRows(picks: Picks, unit: LengthUnit): [string, string][] 
   } else if (picks.length === 1) {
     const f = picks[0].fit;
     if (f.type === 'cylinder' || f.type === 'circle') rows.push(['diameter', fmtLen(unit, 2 * f.radius)], ['radius', fmtLen(unit, f.radius)]);
-    rows.push(['', 'Pick feature B to measure from A.']);
   }
   return rows;
 }

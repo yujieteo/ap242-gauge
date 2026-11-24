@@ -35,12 +35,12 @@ async function sourceRules(): Promise<void> {
 
 function distIsCurrent(): void {
   console.log('\n== build and committed dist');
-  const dist = root + 'dist/ap242-gauge.html';
+  const dist = root + PAGE;
   const before = readFileSync(dist);
   const r = Bun.spawnSync(['bun', 'run', 'build.ts'], { cwd: root, stdout: 'inherit', stderr: 'inherit' });
   if (r.exitCode !== 0) { failures.push('build'); return; }
   if (!before.equals(readFileSync(dist))) {
-    console.error('dist/ap242-gauge.html was stale; it is rebuilt now, so commit it');
+    console.error(PAGE + ' was stale; it is rebuilt now, so commit it');
     failures.push('dist is stale');
   }
 }
