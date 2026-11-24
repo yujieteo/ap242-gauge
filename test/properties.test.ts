@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import fc from 'fast-check';
-import { UNITS, basis, boundary, cross, dot, eigSym3, extractFaces, faceEdge, fitCircle2, fitFace, len, measure, norm, parseStepLengthUnit, scale, add } from '../src/geom.ts';
+import { UNITS, basis, boundary, cross, dot, eigSym3, fitCircle2, len, norm, scale, add } from '../src/geom.ts';
+import { extractFaces, faceEdge, fitFace, measure, parseStepLengthUnit } from './subject.ts';
 import type { EdgeFit, Face, Feature, Vec3 } from '../src/geom.ts';
 import { describe, measureRows } from '../src/format.ts';
 import { parseOcctResult } from '../src/occt.ts';
@@ -201,7 +202,7 @@ test('faceEdge: a slot gives its arcs as circles and its sides as lines', () => 
         expect(Math.abs(edge.radius - r)).toBeLessThan(1e-6 * r);
       }
     });
-  }));
+  }), { examples: [[7.001762251819201, 0.5, 22], [31.576473088414485, 6.166430733686076, 8]] });
 });
 
 test('faceEdge: a small arc beside a long straight edge keeps its own radius', () => {

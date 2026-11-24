@@ -1,10 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
+import { isRecord } from '../src/util.ts';
 
 function canonical(value: unknown): string {
   return JSON.stringify(value, (_key, v: unknown) => {

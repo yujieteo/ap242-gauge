@@ -3,9 +3,18 @@ import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const root = join(import.meta.dir, '..');
-const SKILLS = join(homedir(), '.claude', 'skills');
-const figureEngine = join(SKILLS, 'schematic-figure');
-const emilStyle = join(SKILLS, 'schematic-emil');
+const configDir = process.env['CLAUDE_CONFIG_DIR'];
+const skillDirs = [...(configDir ? [join(configDir, 'skills')] : []), join(homedir(), '.claude', 'skills')];
+function skill(name: string): string {
+  const found = skillDirs.map((d) => join(d, name)).find((p) => existsSync(p));
+  if (!found) {
+    console.error('the skill ' + name + ' is missing; looked in ' + skillDirs.join(' and '));
+    process.exit(1);
+  }
+  return found;
+}
+const figureEngine = skill('schematic-figure');
+const emilStyle = skill('schematic-emil');
 const SOURCE = 'docs/figures/face-fit.ts';
 const COMMITTED = join(root, 'docs/figures/face-fit.svg');
 

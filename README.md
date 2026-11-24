@@ -91,7 +91,7 @@ Each face fit shows its rms residual. A face fits a plane or a cylinder only whe
 You need [Bun](https://bun.sh) 1.4.4.
 
 ```sh
-bun install
+bun install --frozen-lockfile
 bun run build   # writes dist/ap242-gauge.html
 bun test        # no browser
 bun run check   # type check, source rules, dead code, tests, dist, page budget, output replay
@@ -101,9 +101,18 @@ bun run check   # type check, source rules, dead code, tests, dist, page budget,
 
 `test/nist.test.ts` loads two NIST AP242 test models with occt-import-js and compares fits with the drawing values and with the radii in the files. `test/properties.test.ts` checks the fits on generated shapes (planes, cylinders, slots, ellipses). See [`test/data/SOURCE.md`](test/data/SOURCE.md) for the files and their source.
 
-`bun run replay` runs the tests on the working tree and records the input of each fit and measurement. It runs these inputs through `src/geom` on the base commit and on the working tree, and fails on each difference. Run `bun run replay -- --accept` to accept a change of the output after you read the diff.
+`bun run replay` runs the tests on the working tree and records the input of each fit and measurement. It runs these inputs through `src/geom` on the base commit and on the working tree, and fails on each difference. A difference listed in `scripts/replay-accepted.json` does not fail. `bun run replay -- --accept` adds the new differences of that run to the file. Run it only after you read the diff, and commit the file. The replay names the entries that match no difference. Remove them when the change is on `main`.
 
 `bun run scripts/figure.ts` renders `docs/figures/face-fit.ts` with the schematic-figure engine and compares the result with `docs/figures/face-fit.svg`.
+
+### Checks
+
+- Run `bun run check` before each commit. It is the one check.
+- To run one test, use `bun test test/open.test.ts -t "<name>"`.
+- Each comment in a `.ts` or `.html` file must hold a URL.
+- Code in a `*.hot.ts` file must not create objects, arrays or functions.
+- After a build, commit `dist/ap242-gauge.html`.
+- Run `bun run replay -- --accept` only after the user has read the diff.
 
 ## Licences
 

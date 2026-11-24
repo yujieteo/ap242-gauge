@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs';
+import { escapeHtml } from './src/format.ts';
 
 const root = new URL('.', import.meta.url);
 const OCCT_VERSION = '0.0.23';
@@ -20,8 +21,6 @@ const occtVersion = parsePackageField(JSON.parse(await read(OCCT_DIR + 'package.
 if (occtVersion !== OCCT_VERSION) throw new Error('expected occt-import-js ' + OCCT_VERSION + ', found ' + occtVersion);
 
 const script = (s: string): string => s.replace(/<\/script/gi, '<\\/script');
-const HTML_ESCAPES: Readonly<Record<string, string>> = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
-const html = (s: string): string => s.replace(/[&<>]/g, (c) => HTML_ESCAPES[c] ?? c);
 
 async function bundle(entry: string): Promise<string> {
   const built = await Bun.build({ entrypoints: [new URL(entry, root).pathname], root: new URL('.', root).pathname, target: 'browser', format: 'iife', minify: false });
@@ -43,7 +42,7 @@ const licences = [
 ].join('\n');
 
 const parts: Readonly<Record<string, string>> = {
-  '@@LICENCES@@': html(licences),
+  '@@LICENCES@@': escapeHtml(licences),
   '@@OCCT_JS@@': script(await read(OCCT_DIR + 'dist/occt-import-js.js')),
   '@@WORKER_JS@@': script(await bundle('src/reader.worker.ts')),
   '@@WASM_B64@@': await base64(OCCT_DIR + 'dist/occt-import-js.wasm'),
