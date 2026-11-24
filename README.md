@@ -91,7 +91,7 @@ Each face fit shows its rms residual. A face fits a plane or a cylinder only whe
 You need [Bun](https://bun.sh) 1.4.4.
 
 ```sh
-bun install
+bun install --frozen-lockfile
 bun run build   # writes dist/ap242-gauge.html
 bun test        # no browser
 bun run check   # type check, source rules, dead code, tests, dist, page budget, output replay
@@ -104,6 +104,15 @@ bun run check   # type check, source rules, dead code, tests, dist, page budget,
 `bun run replay` runs the tests on the working tree and records the input of each fit and measurement. It runs these inputs through `src/geom` on the base commit and on the working tree, and fails on each difference. Run `bun run replay -- --accept` to accept a change of the output after you read the diff.
 
 `bun run scripts/figure.ts` renders `docs/figures/face-fit.ts` with the schematic-figure engine and compares the result with `docs/figures/face-fit.svg`.
+
+### Checks
+
+- Run `bun run check` before each commit. It is the one check.
+- To run one test, use `bun test test/open.test.ts -t "<name>"`.
+- Each comment in a `.ts` or `.html` file must hold a URL.
+- Code in a `*.hot.ts` file must not create objects, arrays or functions.
+- After a build, commit `dist/ap242-gauge.html`.
+- Run `bun run replay -- --accept` only after the user has read the diff.
 
 ## Licences
 
