@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import fc from 'fast-check';
-import { UNITS, basis, boundary, cross, dot, eigSym3, extractFaces, faceEdge, fitCircle2, fitFace, len, measure, norm, parseStepLengthUnit, scale, add } from '../src/geom.ts';
+import { UNITS, basis, boundary, cross, dot, eigSym3, fitCircle2, len, norm, scale, add } from '../src/geom.ts';
+import { extractFaces, faceEdge, fitFace, measure, parseStepLengthUnit } from './subject.ts';
 import type { EdgeFit, Face, Feature, Vec3 } from '../src/geom.ts';
 import { describe, measureRows } from '../src/format.ts';
 import { parseOcctResult } from '../src/occt.ts';
