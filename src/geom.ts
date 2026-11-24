@@ -496,7 +496,12 @@ function fitEdgeRun(chain: readonly Vec3[], closed: boolean, s: number): EdgeFit
   const arcL = grow(s, s + 1, true, onCircle), arcR = grow(s, s + 1, false, onCircle);
   const arc = arcL[1] - arcL[0] >= arcR[1] - arcR[0] ? arcL : arcR;
   const arcPoints = run(arc[0], arc[1]);
-  if (looksLikeArc(arcPoints, ARC_MIN_POINTS)) return fitCircle(arcPoints);
+  const sharperPastEnd = (): boolean => {
+    let inner = 0;
+    for (let i = arc[0] + 1; i < arc[1]; i++) inner = Math.max(inner, turn(i) ?? Infinity);
+    return [turn(arc[0]), turn(arc[1])].some((t) => t !== null && inner <= FACET_TURN_RATIO * t);
+  };
+  if (looksLikeArc(arcPoints, ARC_MIN_POINTS) && (arcPoints.length >= ARC_FREE_POINTS || !sharperPastEnd())) return fitCircle(arcPoints);
   const seedLength = len(sub(P(s + 1), P(s)));
   const facetOf = (joint: number, step: number): boolean => {
     const t0 = turn(joint), t1 = turn(joint + step);
