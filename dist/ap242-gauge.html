@@ -1300,6 +1300,9 @@ else if (typeof define === 'function' && define['amd'])
       throw new Error("index " + index + " is outside 0.." + (array.length - 1));
     return value;
   }
+  function isRecord(value) {
+    return typeof value === "object" && value !== null;
+  }
 
   // src/geom.ts
   var AXES = [0, 1, 2];
@@ -1571,9 +1574,6 @@ else if (typeof define === 'function' && define['amd'])
   }
 
   // src/occt.ts
-  function isRecord(value) {
-    return typeof value === "object" && value !== null;
-  }
   function field(value, name) {
     if (!isRecord(value))
       throw new Error("expected an object with " + name);
@@ -1676,6 +1676,9 @@ else if (typeof define === 'function' && define['amd'])
     if (value === undefined)
       throw new Error("index " + index + " is outside 0.." + (array.length - 1));
     return value;
+  }
+  function isRecord(value) {
+    return typeof value === "object" && value !== null;
   }
 
   // src/geom.ts
@@ -2679,9 +2682,6 @@ else if (typeof define === 'function' && define['amd'])
   }
 
   // src/occt.ts
-  function isRecord(value) {
-    return typeof value === "object" && value !== null;
-  }
   function field(value, name) {
     if (!isRecord(value))
       throw new Error("expected an object with " + name);

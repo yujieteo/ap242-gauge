@@ -8,3 +8,7 @@ export function at(array: ArrayLike<number>, index: number): number {
   if (value === undefined) throw new Error('index ' + index + ' is outside 0..' + (array.length - 1));
   return value;
 }
+
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}

@@ -1,15 +1,12 @@
 import type { BrepGroup, LinearUnitName, MeshGeometry } from './geom.ts';
 import type { Vec3 } from './geom.ts';
+import { isRecord } from './util.ts';
 
 type OcctMesh = MeshGeometry & { readonly color: Vec3 | null };
 export type OcctResult =
   | { readonly success: false }
   | { readonly success: true; readonly meshes: readonly OcctMesh[] };
 export type OcctReader = (content: Uint8Array, linearUnit: LinearUnitName) => OcctResult;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 function field(value: unknown, name: string): unknown {
   if (!isRecord(value)) throw new Error('expected an object with ' + name);
