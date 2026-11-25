@@ -319,7 +319,7 @@ function showPicks(): void {
   setOverlays('hover', []);
   r.hover = NO_SELECTION;
   feats.innerHTML = cards.join('');
-  const rows = measureRows(picks, unit).filter((row) => row[0] !== '');
+  const rows = measureRows(picks, unit);
   meas.innerHTML = rows.map((row) => '<tr><td>' + escapeHtml(row[0]) + '</td><td class="v">' + escapeHtml(row[1]) + '</td></tr>').join('');
   hint.textContent = picks.length === 0 ? 'Click a feature to set reference A.'
     : picks.length === 1 ? 'Click a second feature to measure from A.' : 'Click another feature to replace B. A stays.';

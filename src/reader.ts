@@ -11,8 +11,8 @@ export type FromWorker =
   | { readonly kind: 'done'; readonly data: ModelData }
   | { readonly kind: 'error'; readonly message: string };
 
-export type Sources = { readonly occt: string; readonly worker: string; readonly wasm: Uint8Array };
-export type Reader = {
+type Sources = { readonly occt: string; readonly worker: string; readonly wasm: Uint8Array };
+type Reader = {
   readonly ready: Promise<void>;
   readonly background: boolean;
   read(name: string, file: ArrayBuffer, stage: (text: string) => void): Promise<ModelData>;

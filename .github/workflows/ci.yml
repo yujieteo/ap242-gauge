@@ -27,7 +27,11 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/home"
           echo "HOME=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
+      # The output replay of bun run check compares the outputs with the
+      # merge base of HEAD and origin/main, so the job needs the full history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       # bun.lock needs bun 1.4, and nixpkgs has bun 1.3.13, which cannot read it.
       # So this takes the nixpkgs bun package and gives it the official
       # bun 1.4.4 release file. The hash is the SHA-256 that the bun release
@@ -48,7 +52,6 @@ jobs:
           echo "$bun/bin" >> "$GITHUB_PATH"
       - run: bun --version
       - run: bun install --frozen-lockfile
-      - run: bun run build
-      - name: Committed dist matches the sources
-        run: git diff --exit-code -- dist/
-      - run: bun test
+      # The one check of the README: type check, source rules, dead code,
+      # tests, committed dist, page budget and output replay.
+      - run: bun run check

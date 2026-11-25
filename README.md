@@ -2,7 +2,7 @@
 
 ap242-gauge opens a STEP AP242 file (for example from CATIA V5) in your browser. You pick a reference feature and a second feature. It gives the distance and the angle between them, and the diameter and radius of holes, shafts and arcs.
 
-It is one HTML file. It works offline, from a local file, with no server and no install. Your model does not leave the page. It reads the STEP file with [occt-import-js](https://github.com/kovacsv/occt-import-js) (Open CASCADE Technology as WebAssembly). The read runs in a worker, so the page stays live. It shows the elapsed time, and you can cancel it.
+It is one HTML file. It works offline, from a local file, with no server and no install. Your model does not leave the page. It reads the STEP file with [occt-import-js](https://github.com/kovacsv/occt-import-js) (Open CASCADE Technology as WebAssembly). The read runs in a worker, so the page stays live. It shows the elapsed time, and you can cancel it. When the browser does not allow the worker, the page reads the file on its main thread. Then the page does not respond until the read ends, and you cannot cancel the read.
 
 ## Use
 
@@ -45,11 +45,11 @@ Edge mode uses the boundary of the face that you click. It takes the edge neares
 
 | A and B | Values |
 | --- | --- |
-| plane and plane | angle, and distance when the planes are parallel |
-| plane and axis | angle, and distance when the axis is parallel to the plane |
+| plane and plane | angle between the planes, angle between the normals, and distance: between the planes when they are parallel, or of the centroid of face B from plane A when they are not |
+| plane and axis | angle, and distance: of the axis from the plane when it is parallel to the plane, or of the axis point from the plane when it is not |
 | axis and axis | angle, and distance between parallel axes or shortest distance between skew axes |
 | point and plane, point and axis | distance |
-| any two picks | distance between the two pick points, with dx, dy and dz |
+| any two picks | distance between the two feature points, and distance between the two pick points, with dx, dy and dz |
 
 Lengths are in the length unit of the STEP file (mm, cm, m, inch or foot). The tool reads the unit from the `LENGTH_UNIT` of the geometric context of the file. Each unit shows a resolution of 0.3 µm or finer. Angles are in degrees.
 
@@ -97,13 +97,13 @@ bun test        # no browser
 bun run check   # type check, source rules, dead code, tests, dist, page budget, output replay
 ```
 
-`build.ts` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (base64), the Inter font (base64), and `src/app.ts` and `src/reader.worker.ts` with their imports, bundled by `bun build`. The page starts the worker from the text of `occt-import-js.js` and the worker bundle. When a browser does not allow that worker, the page reads the file on its main thread. The build is deterministic, because it does not minify or compress. CI rebuilds and checks that the committed `dist/` is the same.
+`build.ts` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (base64), the Inter font (base64), and `src/app.ts` and `src/reader.worker.ts` with their imports, bundled by `bun build`. The page starts the worker from the text of `occt-import-js.js` and the worker bundle. When a browser does not allow that worker, the page reads the file on its main thread. The build is deterministic, because it does not minify or compress. CI runs `bun run check`, so it also rebuilds and checks that the committed `dist/` is the same.
 
 `test/nist.test.ts` loads two NIST AP242 test models with occt-import-js and compares fits with the drawing values and with the radii in the files. `test/properties.test.ts` checks the fits on generated shapes (planes, cylinders, slots, ellipses). See [`test/data/SOURCE.md`](test/data/SOURCE.md) for the files and their source.
 
 `bun run replay` runs the tests on the working tree and records the input of each fit and measurement. It runs these inputs through `src/geom` on the base commit and on the working tree, and fails on each difference. A difference listed in `scripts/replay-accepted.json` does not fail. `bun run replay -- --accept` adds the new differences of that run to the file. Run it only after you read the diff, and commit the file. The replay names the entries that match no difference. Remove them when the change is on `main`.
 
-`bun run scripts/figure.ts` renders `docs/figures/face-fit.ts` with the schematic-figure engine and compares the result with `docs/figures/face-fit.svg`.
+`bun run scripts/figure.ts` renders `docs/figures/face-fit.ts` with the schematic-figure engine and compares the result with `docs/figures/face-fit.svg`. It needs the Claude Code skills `schematic-figure` and `schematic-emil` in `~/.claude/skills` (or in `skills` of `CLAUDE_CONFIG_DIR`). These skills are not part of this repository. `bun run check` does not run this script, so no check compares `docs/figures/face-fit.svg` with its source.
 
 ### Checks
 

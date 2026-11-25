@@ -24,7 +24,7 @@ export type ModelData = {
   readonly prepareMs: number;
 };
 
-export type ReadOutcome = { readonly ok: true; readonly data: ModelData } | { readonly ok: false; readonly message: string };
+type ReadOutcome = { readonly ok: true; readonly data: ModelData } | { readonly ok: false; readonly message: string };
 
 function localOrigin(xyz: Float64Array): Vec3 {
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];

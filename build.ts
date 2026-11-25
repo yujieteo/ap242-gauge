@@ -1,10 +1,10 @@
 import { mkdirSync } from 'node:fs';
 import { escapeHtml } from './src/format.ts';
+import { PAGE } from './scripts/budget.ts';
 
 const root = new URL('.', import.meta.url);
 const OCCT_VERSION = '0.0.23';
 const OCCT_DIR = 'node_modules/occt-import-js/';
-const OUTPUT = 'dist/ap242-gauge.html';
 
 const read = (p: string): Promise<string> => Bun.file(new URL(p, root)).text();
 
@@ -55,5 +55,5 @@ for (const [mark, text] of Object.entries(parts)) {
   out = out.replace(mark, () => text);
 }
 mkdirSync(new URL('dist/', root), { recursive: true });
-await Bun.write(new URL(OUTPUT, root), out);
-console.log(OUTPUT, (out.length / 1e6).toFixed(2), 'MB');
+await Bun.write(new URL(PAGE, root), out);
+console.log(PAGE, (out.length / 1e6).toFixed(2), 'MB');

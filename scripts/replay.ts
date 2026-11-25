@@ -31,7 +31,7 @@ function mustRun(cmd: string[]): void {
   if (run(cmd) !== 0) throw new Error(cmd.join(' ') + ' failed');
 }
 
-export type ReplayResult = { readonly total: number; readonly diffs: readonly { readonly index: number; readonly base: string; readonly branch: string }[] };
+type ReplayResult = { readonly total: number; readonly diffs: readonly { readonly index: number; readonly base: string; readonly branch: string }[] };
 
 export function compareOutputs(base: readonly string[], branch: readonly string[]): ReplayResult {
   const total = Math.max(base.length, branch.length);

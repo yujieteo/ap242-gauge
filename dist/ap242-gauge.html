@@ -2104,10 +2104,15 @@ else if (typeof define === 'function' && define['amd'])
     if (!(L > 0))
       return null;
     const d = scale(sub(b, a), 1 / L);
-    let worst = 0;
-    for (const p of chain)
-      worst = Math.max(worst, len(cross(sub(p, a), d)));
-    return worst <= chainTol(chain) ? { type: "line", point: scale(add(a, b), 0.5), dir: d, length: L, ends: [a, b], rms: worst } : null;
+    let worst = 0, ss = 0;
+    for (const p of chain) {
+      const off = len(cross(sub(p, a), d));
+      worst = Math.max(worst, off);
+      ss += off * off;
+    }
+    if (worst > chainTol(chain))
+      return null;
+    return { type: "line", point: scale(add(a, b), 0.5), dir: d, length: L, ends: [a, b], rms: Math.sqrt(ss / chain.length) };
   }
   function fitCircle(chain) {
     if (chain.length < 3)
@@ -2278,7 +2283,7 @@ else if (typeof define === 'function' && define['amd'])
   }
 
   // src/format.ts
-  var DECIMALS = { mm: 4, cm: 5, m: 7, in: 5, ft: 6 };
+  var DECIMALS = { mm: 4, cm: 5, m: 7, in: 5, ft: 7 };
   var fmtLen = (unit, x) => x.toFixed(DECIMALS[unit.label]) + " " + unit.label;
   var fmtVec = (v, decimals = 4) => "(" + v.map((x) => x.toFixed(decimals)).join(", ") + ")";
   var HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
@@ -2319,7 +2324,6 @@ else if (typeof define === 'function' && define['amd'])
       const f = picks[0].fit;
       if (f.type === "cylinder" || f.type === "circle")
         rows.push(["diameter", fmtLen(unit, 2 * f.radius)], ["radius", fmtLen(unit, f.radius)]);
-      rows.push(["", "Pick feature B to measure from A."]);
     }
     return rows;
   }
@@ -3375,7 +3379,7 @@ else if (typeof define === 'function' && define['amd'])
     setOverlays("hover", []);
     r.hover = NO_SELECTION;
     feats.innerHTML = cards.join("");
-    const rows = measureRows(picks, unit).filter((row) => row[0] !== "");
+    const rows = measureRows(picks, unit);
     meas.innerHTML = rows.map((row) => "<tr><td>" + escapeHtml(row[0]) + '</td><td class="v">' + escapeHtml(row[1]) + "</td></tr>").join("");
     hint.textContent = picks.length === 0 ? "Click a feature to set reference A." : picks.length === 1 ? "Click a second feature to measure from A." : "Click another feature to replace B. A stays.";
     el("swap", HTMLButtonElement).disabled = picks.length !== 2;
