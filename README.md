@@ -103,7 +103,7 @@ bun run check   # type check, source rules, dead code, tests, dist, page budget,
 
 `bun run replay` runs the tests on the working tree and records the input of each fit and measurement. It runs these inputs through `src/geom` on the base commit and on the working tree, and fails on each difference. A difference listed in `scripts/replay-accepted.json` does not fail. `bun run replay -- --accept` adds the new differences of that run to the file. Run it only after you read the diff, and commit the file. The replay names the entries that match no difference. Remove them when the change is on `main`.
 
-`bun run scripts/figure.ts` renders `docs/figures/face-fit.ts` with the schematic-figure engine and compares the result with `docs/figures/face-fit.svg`. It needs the Claude Code skills `schematic-figure` and `schematic-emil` in `~/.claude/skills` (or in `skills` of `CLAUDE_CONFIG_DIR`). These skills are not part of this repository. `bun run check` does not run this script, so no check compares `docs/figures/face-fit.svg` with its source.
+`bun run scripts/figure.ts` renders `docs/figures/face-fit.ts` with the schematic-figure engine and compares the result with `docs/figures/face-fit.svg`. It needs the `schematic-figure` and `schematic-emil` skills in `~/.agents/skills` (or `~/.claude/skills` / `$CLAUDE_CONFIG_DIR/skills`). These skills are not part of this repository. `bun run check` does not run this script, so no check compares `docs/figures/face-fit.svg` with its source.
 
 ### Checks
 
@@ -112,7 +112,7 @@ bun run check   # type check, source rules, dead code, tests, dist, page budget,
 - Each comment in a `.ts` or `.html` file must hold a URL, and `<style>` blocks in `.html` files may not hold `/* ... */` comments.
 - Code in a `*.hot.ts` file must not create objects, arrays, functions or `new` expressions.
 - After a build, commit `dist/ap242-gauge.html`.
-- Run `bun run replay -- --accept` only after the user has read the diff.
+- Run `bun run replay -- --accept` only after you have read the diff.
 
 ## Licences
 

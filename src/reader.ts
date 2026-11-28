@@ -31,12 +31,18 @@ function workerReader(src: Sources): Reader {
     worker = new Worker(url);
     const w = worker;
     ready = new Promise((resolve, reject) => {
+      let readyOk = false;
       w.onmessage = (e: MessageEvent<FromWorker>) => {
         const m = e.data;
-        if (m.kind === 'ready') resolve();
+        if (m.kind === 'ready') { readyOk = true; resolve(); }
         else if (m.kind === 'stage') job?.stage(m.text);
         else if (m.kind === 'done') { job?.resolve(m.data); job = null; }
-        else { reject(new Error(m.message)); job?.reject(new Error(m.message)); job = null; }
+        else {
+          if (!readyOk) { failed = true; w.terminate(); }
+          reject(new Error(m.message));
+          job?.reject(new Error(m.message));
+          job = null;
+        }
       };
       w.onerror = (e) => {
         const x = new Error(e.message || 'the reader worker failed');

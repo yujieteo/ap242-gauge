@@ -4,7 +4,11 @@ import { join } from 'node:path';
 
 const root = join(import.meta.dir, '..');
 const configDir = process.env['CLAUDE_CONFIG_DIR'];
-const skillDirs = [...(configDir ? [join(configDir, 'skills')] : []), join(homedir(), '.claude', 'skills')];
+const skillDirs = [
+  join(homedir(), '.agents', 'skills'),
+  ...(configDir ? [join(configDir, 'skills')] : []),
+  join(homedir(), '.claude', 'skills'),
+];
 function skill(name: string): string {
   const found = skillDirs.map((d) => join(d, name)).find((p) => existsSync(p));
   if (!found) {
