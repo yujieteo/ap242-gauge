@@ -453,7 +453,7 @@ window.addEventListener('keydown', (e) => {
 
 const fileInput = el('file', HTMLInputElement);
 const openFrom = (file: File | undefined): void => {
-  if (file) openFile(file).catch((x: unknown) => toast(String(x), 'error'));
+  if (file) void openFile(file);
 };
 el('open', HTMLButtonElement).addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => {

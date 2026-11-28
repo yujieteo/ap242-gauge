@@ -25,8 +25,9 @@ export const CANCELLED = 'cancelled';
 
 function workerReader(src: Sources): Reader {
   const url = URL.createObjectURL(new Blob([src.occt, '\n', src.worker], { type: 'text/javascript' }));
-  let worker: Worker, ready: Promise<void>, job: Job | null = null;
+  let worker: Worker, ready: Promise<void>, job: Job | null = null, failed = false;
   const start = (): void => {
+    failed = false;
     worker = new Worker(url);
     const w = worker;
     ready = new Promise((resolve, reject) => {
@@ -37,7 +38,14 @@ function workerReader(src: Sources): Reader {
         else if (m.kind === 'done') { job?.resolve(m.data); job = null; }
         else { reject(new Error(m.message)); job?.reject(new Error(m.message)); job = null; }
       };
-      w.onerror = (e) => { const x = new Error(e.message || 'the reader worker failed'); reject(x); job?.reject(x); job = null; };
+      w.onerror = (e) => {
+        const x = new Error(e.message || 'the reader worker failed');
+        failed = true;
+        w.terminate();
+        reject(x);
+        job?.reject(x);
+        job = null;
+      };
     });
     ready.catch(() => undefined);
     const wasm = src.wasm.slice().buffer;
@@ -57,6 +65,7 @@ function workerReader(src: Sources): Reader {
     background: true,
     read(name, file, stage) {
       cancel();
+      if (failed) start();
       return new Promise<ModelData>((resolve, reject) => {
         const mine: Job = { stage, resolve, reject };
         job = mine;

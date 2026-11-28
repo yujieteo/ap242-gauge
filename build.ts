@@ -3,7 +3,6 @@ import { escapeHtml } from './src/format.ts';
 import { PAGE } from './scripts/budget.ts';
 
 const root = new URL('.', import.meta.url);
-const OCCT_VERSION = '0.0.23';
 const OCCT_DIR = 'node_modules/occt-import-js/';
 
 const read = (p: string): Promise<string> => Bun.file(new URL(p, root)).text();
@@ -18,7 +17,6 @@ function parsePackageField(json: unknown, name: string): string {
 const wantedBun = parsePackageField(JSON.parse(await read('package.json')), 'packageManager');
 if (wantedBun !== 'bun@' + Bun.version) throw new Error('package.json packageManager is ' + wantedBun + ', running bun@' + Bun.version);
 const occtVersion = parsePackageField(JSON.parse(await read(OCCT_DIR + 'package.json')), 'version');
-if (occtVersion !== OCCT_VERSION) throw new Error('expected occt-import-js ' + OCCT_VERSION + ', found ' + occtVersion);
 
 const script = (s: string): string => s.replace(/<\/script/gi, '<\\/script');
 

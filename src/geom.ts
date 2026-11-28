@@ -519,15 +519,15 @@ function fitEdgeRun(chain: readonly Vec3[], closed: boolean, s: number): EdgeFit
 }
 
 type PlaneFeature = { readonly kind: 'plane'; readonly point: Vec3; readonly normal: Vec3 };
-type AxisFeature = { readonly kind: 'axis'; readonly point: Vec3; readonly dir: Vec3; readonly radius?: number; readonly center?: true };
+type AxisFeature = { readonly kind: 'axis'; readonly point: Vec3; readonly dir: Vec3 };
 type PointFeature = { readonly kind: 'point'; readonly point: Vec3 };
 export type Feature = PlaneFeature | AxisFeature | PointFeature;
 
 export function featureFrom(fit: Fit): Feature {
   switch (fit.type) {
     case 'plane': return { kind: 'plane', point: fit.point, normal: fit.normal };
-    case 'cylinder': return { kind: 'axis', point: fit.point, dir: fit.dir, radius: fit.radius };
-    case 'circle': return { kind: 'axis', point: fit.point, dir: fit.dir, radius: fit.radius, center: true };
+    case 'cylinder':
+    case 'circle':
     case 'line': return { kind: 'axis', point: fit.point, dir: fit.dir };
     default: return { kind: 'point', point: fit.point };
   }
