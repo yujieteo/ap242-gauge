@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { escapeHtml } from './src/format.ts';
-import { PAGE } from './scripts/budget.ts';
+
+const PAGE = 'dist/ap242-gauge.html';
 
 const root = new URL('.', import.meta.url);
 const OCCT_DIR = 'node_modules/occt-import-js/';

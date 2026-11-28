@@ -52,6 +52,6 @@ jobs:
           echo "$bun/bin" >> "$GITHUB_PATH"
       - run: bun --version
       - run: bun install --frozen-lockfile
-      # The one check of the README: type check, source rules, dead code,
-      # tests, committed dist, page budget and output replay.
+      # The one check of the README: type check, hot-path check, dead code,
+      # tests, build, and output replay.
       - run: bun run check

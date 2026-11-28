@@ -94,10 +94,10 @@ You need [Bun](https://bun.sh) 1.4.4.
 bun install --frozen-lockfile
 bun run build   # writes dist/ap242-gauge.html
 bun test        # no browser
-bun run check   # type check, source rules, dead code, tests, dist, page budget, output replay
+bun run check   # type check, hot-path check, dead code, tests, build, output replay
 ```
 
-`build.ts` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (base64), the Inter font (base64), and `src/app.ts` and `src/reader.worker.ts` with their imports, bundled by `bun build`. The page starts the worker from the text of `occt-import-js.js` and the worker bundle. When a browser does not allow that worker, the page reads the file on its main thread. The build is deterministic, because it does not minify or compress. CI runs `bun run check`, so it also rebuilds and checks that the committed `dist/` is the same.
+`build.ts` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (base64), the Inter font (base64), and `src/app.ts` and `src/reader.worker.ts` with their imports, bundled by `bun build`. The page starts the worker from the text of `occt-import-js.js` and the worker bundle. When a browser does not allow that worker, the page reads the file on its main thread. The build is deterministic, because it does not minify or compress. CI runs `bun run check`, which verifies the build succeeds.
 
 `test/nist.test.ts` loads two NIST AP242 test models with occt-import-js and compares fits with the drawing values and with the radii in the files. `test/properties.test.ts` checks the fits on generated shapes (planes, cylinders, slots, ellipses). See [`test/data/SOURCE.md`](test/data/SOURCE.md) for the files and their source.
 
@@ -109,9 +109,7 @@ bun run check   # type check, source rules, dead code, tests, dist, page budget,
 
 - Run `bun run check` before each commit. It is the one check.
 - To run one test, use `bun test test/open.test.ts -t "<name>"`.
-- Each comment in a `.ts` or `.html` file must hold a URL, and `<style>` blocks in `.html` files may not hold `/* ... */` comments.
 - Code in a `*.hot.ts` file must not create objects, arrays, functions or `new` expressions.
-- After a build, commit `dist/ap242-gauge.html`.
 - Run `bun run replay -- --accept` only after you have read the diff.
 
 ## Licences
