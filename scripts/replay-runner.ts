@@ -41,8 +41,12 @@ function run(fn: string, input: unknown): unknown {
       return Array.isArray(faces) ? faces.map(faceDigest) : faces;
     }
     case 'fitFace': return call(fn, [reviveFace(input)]);
-    case 'faceEdge': return isRecord(input) ? call(fn, [reviveFace(input['face']), input['hit']]) : undefined;
-    case 'measure': return isRecord(input) ? call(fn, [input['a'], input['b']]) : undefined;
+    case 'faceEdge':
+      if (!isRecord(input)) throw new Error('faceEdge input must be an object');
+      return call(fn, [reviveFace(input['face']), input['hit']]);
+    case 'measure':
+      if (!isRecord(input)) throw new Error('measure input must be an object');
+      return call(fn, [input['a'], input['b']]);
     default: throw new Error('unknown captured function ' + fn);
   }
 }

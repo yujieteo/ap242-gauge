@@ -39,7 +39,7 @@ export function camFrame(cam: Cam, fr: Frame): void {
   fr.eye.y = cam.target.y + by * cam.dist;
   fr.eye.z = cam.target.z + bz * cam.dist;
   fr.fwd.x = bx * -1; fr.fwd.y = by * -1; fr.fwd.z = bz * -1;
-  const rx = fr.fwd.y * 1 - fr.fwd.z * 0, ry = fr.fwd.z * 0 - fr.fwd.x * 1, rz = fr.fwd.x * 0 - fr.fwd.y * 0;
+  const rx = fr.fwd.y, ry = -fr.fwd.x, rz = 0;
   const l = Math.sqrt(rx * rx + ry * ry + rz * rz);
   if (l > 0) {
     const s = 1 / l;
