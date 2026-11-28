@@ -109,8 +109,8 @@ bun run check   # type check, source rules, dead code, tests, dist, page budget,
 
 - Run `bun run check` before each commit. It is the one check.
 - To run one test, use `bun test test/open.test.ts -t "<name>"`.
-- Each comment in a `.ts` or `.html` file must hold a URL.
-- Code in a `*.hot.ts` file must not create objects, arrays or functions.
+- Each comment in a `.ts` or `.html` file must hold a URL, and `<style>` blocks in `.html` files may not hold `/* ... */` comments.
+- Code in a `*.hot.ts` file must not create objects, arrays, functions or `new` expressions.
 - After a build, commit `dist/ap242-gauge.html`.
 - Run `bun run replay -- --accept` only after the user has read the diff.
 
