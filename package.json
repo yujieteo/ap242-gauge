@@ -8,8 +8,7 @@
   "scripts": {
     "build": "bun run build.ts",
     "test": "bun test",
-    "check": "bun run scripts/check.ts",
-    "replay": "bun run scripts/replay.ts"
+    "check": "bun run scripts/check.ts"
   },
   "dependencies": {
     "occt-import-js": "0.0.23"

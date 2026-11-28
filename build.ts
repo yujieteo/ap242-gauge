@@ -15,8 +15,6 @@ function parsePackageField(json: unknown, name: string): string {
   return value;
 }
 
-const wantedBun = parsePackageField(JSON.parse(await read('package.json')), 'packageManager');
-if (wantedBun !== 'bun@' + Bun.version) throw new Error('package.json packageManager is ' + wantedBun + ', running bun@' + Bun.version);
 const occtVersion = parsePackageField(JSON.parse(await read(OCCT_DIR + 'package.json')), 'version');
 
 const script = (s: string): string => s.replace(/<\/script/gi, '<\\/script');

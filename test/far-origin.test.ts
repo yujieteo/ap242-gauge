@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { expect, test } from 'bun:test';
 import occtimportjs from 'occt-import-js';
 import { describe } from '../src/format.ts';
-import { add, sub } from '../src/geom.ts';
+import { add, fitFace, sub } from '../src/geom.ts';
 import type { Face, Vec3 } from '../src/geom.ts';
 import { facesOf, readModel } from '../src/model.ts';
 import type { ModelData } from '../src/model.ts';
@@ -12,7 +12,6 @@ import type { OcctReader } from '../src/occt.ts';
 import { raycast } from '../src/raycast.ts';
 import { at } from '../src/util.ts';
 import { faceNear, MODEL_MM } from './models.ts';
-import { fitFace } from './subject.ts';
 
 const OFFSET = 8388608;
 const SHIFT: Vec3 = [OFFSET, OFFSET, OFFSET];

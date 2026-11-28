@@ -2,10 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import occtimportjs from 'occt-import-js';
 import type { Face, LengthUnit, Vec3 } from '../src/geom.ts';
-import { add, cross, dot, len, scale, sub, vertexAt } from '../src/geom.ts';
+import { add, cross, dot, extractFaces, len, parseStepLengthUnit, scale, sub, vertexAt } from '../src/geom.ts';
 import { startOcct } from '../src/occt.ts';
 import type { OcctReader } from '../src/occt.ts';
-import { extractFaces, parseStepLengthUnit } from './subject.ts';
 import { must } from '../src/util.ts';
 
 export type Model = { readonly unit: LengthUnit; readonly faces: Face[] };

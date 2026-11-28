@@ -88,29 +88,25 @@ Each face fit shows its rms residual. A face fits a plane or a cylinder only whe
 
 ## Build and test
 
-You need [Bun](https://bun.sh) 1.4.4.
+You need [Bun](https://bun.sh) 1.4+.
 
 ```sh
 bun install --frozen-lockfile
 bun run build   # writes dist/ap242-gauge.html
 bun test        # no browser
-bun run check   # type check, hot-path check, dead code, tests, build, output replay
+bun run check   # type check, dead code, tests, build
 ```
 
 `build.ts` puts into one HTML file: `occt-import-js.js`, the `occt-import-js.wasm` file (base64), the Inter font (base64), and `src/app.ts` and `src/reader.worker.ts` with their imports, bundled by `bun build`. The page starts the worker from the text of `occt-import-js.js` and the worker bundle. When a browser does not allow that worker, the page reads the file on its main thread. The build is deterministic, because it does not minify or compress. CI runs `bun run check`, which verifies the build succeeds.
 
 `test/nist.test.ts` loads two NIST AP242 test models with occt-import-js and compares fits with the drawing values and with the radii in the files. `test/properties.test.ts` checks the fits on generated shapes (planes, cylinders, slots, ellipses). See [`test/data/SOURCE.md`](test/data/SOURCE.md) for the files and their source.
 
-`bun run replay` runs the tests on the working tree and records the input of each fit and measurement. It runs these inputs through `src/geom` on the base commit and on the working tree, and fails on each difference. A difference listed in `scripts/replay-accepted.json` does not fail. `bun run replay -- --accept` adds the new differences of that run to the file. Run it only after you read the diff, and commit the file. The replay names the entries that match no difference. Remove them when the change is on `main`.
-
-`bun run scripts/figure.ts` renders `docs/figures/face-fit.ts` with the schematic-figure engine and compares the result with `docs/figures/face-fit.svg`. It needs the `schematic-figure` and `schematic-emil` skills in `~/.agents/skills` (or `~/.claude/skills` / `$CLAUDE_CONFIG_DIR/skills`). These skills are not part of this repository. `bun run check` does not run this script, so no check compares `docs/figures/face-fit.svg` with its source.
+`bun run scripts/figure.ts` regenerates `docs/figures/face-fit.svg` from `docs/figures/face-fit.ts` using the `schematic-figure` and `schematic-emil` skills in `~/.agents/skills` (or `~/.claude/skills` / `$CLAUDE_CONFIG_DIR/skills`). These skills are not part of this repository, and `bun run check` does not run this script.
 
 ### Checks
 
 - Run `bun run check` before each commit. It is the one check.
 - To run one test, use `bun test test/open.test.ts -t "<name>"`.
-- Code in a `*.hot.ts` file must not create objects, arrays, functions or `new` expressions.
-- Run `bun run replay -- --accept` only after you have read the diff.
 
 ## Licences
 

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { faceNear, load, MODEL_INCH, MODEL_MM } from './models.ts';
-import { faceEdge, featureFrom, fitFace, measure } from './subject.ts';
+import { faceEdge, featureFrom, fitFace, measure } from '../src/geom.ts';
 import type { Face, Feature, Measurement, Vec3 } from '../src/geom.ts';
 
 const LEN_TOL = 1e-3;
